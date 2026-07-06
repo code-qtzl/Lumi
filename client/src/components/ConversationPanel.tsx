@@ -62,6 +62,8 @@ export default function ConversationPanel({
 	const [voiceUnavailable, setVoiceUnavailable] = useState(false);
 	const [transcriptDraft, setTranscriptDraft] =
 		useState<TranscriptDraft | null>(null);
+	const [rebaselineReason, setRebaselineReason] = useState('');
+	const [showRebaselinePrompt, setShowRebaselinePrompt] = useState(false);
 	const [overrideTargetId, setOverrideTargetId] = useState<string | null>(
 		null,
 	);
@@ -134,7 +136,7 @@ export default function ConversationPanel({
 		}
 	};
 
-	const startRecording = async (isBaselineCapture: boolean) => {
+	const startRecording = async (isBaselineCapture: boolean, explicitReasonTag?: string) => {
 		if (!navigator.mediaDevices?.getUserMedia || voiceUnavailable) {
 			setVoiceWarning(
 				'Voice capture is unavailable in this browser. Continue with manual text entry.',
@@ -178,7 +180,9 @@ export default function ConversationPanel({
 						blob,
 						speaker,
 						isBaselineCapture,
-						reasonTag: isBaselineCapture ? 'initial' : undefined,
+						reasonTag: isBaselineCapture
+							? (explicitReasonTag || 'initial')
+							: undefined,
 					});
 
 					if (isBaselineCapture) {
@@ -340,22 +344,37 @@ export default function ConversationPanel({
 					>
 						{voiceBusy ? 'Analyzing Voice...' : 'Push to Talk'}
 					</button>
-					<button
-						type='button'
-						className='btn btn-primary'
-						onClick={() => startRecording(true)}
-						disabled={
-							loading ||
-							voiceBusy ||
-							voiceUnavailable ||
-							recordingMode !== 'idle' ||
-							speaker !== 'traveler'
-						}
-					>
-						{hasBaseline
-							? 'Re-Capture Baseline'
-							: 'Capture 5s Baseline'}
-					</button>
+					{!hasBaseline ? (
+						<button
+							type='button'
+							className='btn btn-primary'
+							onClick={() => startRecording(true)}
+							disabled={
+								loading ||
+								voiceBusy ||
+								voiceUnavailable ||
+								recordingMode !== 'idle' ||
+								speaker !== 'traveler'
+							}
+						>
+							Capture 5s Baseline
+						</button>
+					) : (
+						<button
+							type='button'
+							className='btn btn-secondary'
+							onClick={() => setShowRebaselinePrompt((v) => !v)}
+							disabled={
+								loading ||
+								voiceBusy ||
+								voiceUnavailable ||
+								recordingMode !== 'idle' ||
+								speaker !== 'traveler'
+							}
+						>
+							Re-Capture Baseline
+						</button>
+					)}
 					{recordingMode !== 'idle' && (
 						<button
 							type='button'
@@ -367,6 +386,52 @@ export default function ConversationPanel({
 					)}
 				</div>
 			</div>
+
+			{showRebaselinePrompt && hasBaseline && (
+				<div className='rebaseline-prompt'>
+					<label htmlFor='rebaseline-reason'>
+						Reason for re-baselining
+					</label>
+					<div className='rebaseline-row'>
+						<input
+							id='rebaseline-reason'
+							type='text'
+							value={rebaselineReason}
+							onChange={(e) => setRebaselineReason(e.target.value)}
+							placeholder='e.g. traveler calmed down, new room'
+							className='rebaseline-input'
+						/>
+						<button
+							type='button'
+							className='btn btn-primary'
+							disabled={
+								!rebaselineReason.trim() ||
+								loading ||
+								voiceBusy ||
+								voiceUnavailable ||
+								recordingMode !== 'idle'
+							}
+							onClick={() => {
+								setShowRebaselinePrompt(false);
+								startRecording(true, rebaselineReason.trim());
+								setRebaselineReason('');
+							}}
+						>
+							Start 5s Capture
+						</button>
+						<button
+							type='button'
+							className='btn btn-secondary'
+							onClick={() => {
+								setShowRebaselinePrompt(false);
+								setRebaselineReason('');
+							}}
+						>
+							Cancel
+						</button>
+					</div>
+				</div>
+			)}
 
 			{!hasBaseline && (
 				<div className='warning-banner inline-banner'>

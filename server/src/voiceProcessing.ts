@@ -410,7 +410,7 @@ async function streamFluxTranscription(
 	mimeType: string,
 	deepgramApiKey: string,
 ): Promise<DeepgramTranscription> {
-	const deepgram = createClient(deepgramApiKey).v('v2');
+	const deepgram = createClient(deepgramApiKey);
 	const tempFile = path.join(
 		os.tmpdir(),
 		`beacon-flux-${randomUUID()}.${extensionFromMimeType(mimeType)}`,
@@ -510,7 +510,12 @@ async function streamFluxTranscription(
 		]);
 
 		ffmpeg.stdout.on('data', (chunk: Buffer) => {
-			(socket as any).sendMedia(chunk);
+			socket.send(
+				chunk.buffer.slice(
+					chunk.byteOffset,
+					chunk.byteOffset + chunk.byteLength,
+				),
+			);
 		});
 
 		let streamTimeout: NodeJS.Timeout | null = null;
