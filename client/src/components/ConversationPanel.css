@@ -58,6 +58,24 @@
 	border-radius: 0;
 }
 
+.tone-concern-banner {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-4);
+	background-color: var(--color-warning-light);
+	border-bottom: 2px solid var(--color-warning, #f59e0b);
+	color: var(--color-text);
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.tone-concern-icon {
+	font-size: var(--text-base);
+	color: var(--color-warning, #f59e0b);
+	flex-shrink: 0;
+}
+
 .rebaseline-prompt {
 	padding: var(--space-3) var(--space-4);
 	border-bottom: 2px solid var(--color-border);

@@ -100,6 +100,11 @@ export default function ConversationPanel({
 	}, []);
 
 	const hasBaseline = Boolean(session.toneState.baseline);
+	const toneConcernActive = session.toneState.toneRaisedConcernActive;
+	const utterancesToClear = Math.max(
+		0,
+		3 - session.toneState.consecutiveNormalTravelerUtterances,
+	);
 
 	const resetRecorder = () => {
 		if (autoStopTimeoutRef.current) {
@@ -437,6 +442,18 @@ export default function ConversationPanel({
 				<div className='warning-banner inline-banner'>
 					Traveler baseline is required before traveler voice tone
 					scoring.
+				</div>
+			)}
+
+			{toneConcernActive && (
+				<div className='tone-concern-banner inline-banner'>
+					<span className='tone-concern-icon'>⚠</span>
+					<span>
+						Elevated tone concern active —{' '}
+						{utterancesToClear === 1
+							? '1 more normal traveler utterance to clear'
+							: `${utterancesToClear} more normal traveler utterances to clear`}
+					</span>
 				</div>
 			)}
 
