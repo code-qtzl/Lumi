@@ -52,7 +52,7 @@ Analyzes for indicators in these categories:
 
 - **Frontend**: React 19, TypeScript, Vite
 - **Backend**: Express, TypeScript
-- **API**: REST endpoints
+- **API**: REST endpoints + Deepgram Flux voice streaming
 - **Styling**: CSS with design system tokens (navy blue theme)
 
 ## Getting Started
@@ -68,6 +68,19 @@ Analyzes for indicators in these categories:
 # Install dependencies for both server and client
 npm run install:all
 ```
+
+### Environment Setup
+
+Copy the example files before running the app:
+
+```bash
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+- `server/.env` needs `DEEPGRAM_API_KEY`
+- `server/.env` can set `BEACON_VOICE_MOCK_MODE=true` for local development without Deepgram
+- `client/.env` can override `VITE_API_BASE_URL` if the API is not on `http://localhost:3000`
 
 ### Running the Application
 
@@ -109,6 +122,13 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 - `POST /sessions/:id/messages` - Send officer observation/response
     - Body: `{ content: string }`
     - Returns: `{ message, riskAssessment, assistantMessage, sessionUpdated }`
+
+- `POST /sessions/:id/voice/analyze` - Push-to-talk voice analysis using Deepgram Flux
+    - Multipart form fields: `audio`, `speaker`, `isBaselineCapture`, `reasonTag`
+    - Returns: transcript, confidence, tone signals, and baseline capture metadata
+
+- `POST /sessions/:id/risk-override` - Override a message risk level with audit logging
+    - Body: `{ messageId, nextLevel, justification, supervisorAcknowledged }`
 
 - `POST /sessions/:id/check-guardrails` - Validate question for guardrails
     - Body: `{ question: string }`
@@ -204,7 +224,7 @@ The application uses a warm, professional design system with:
 
 ## Future Enhancements
 
-- Audio input via Deepgram ASR for hands-free note taking
+- Audio input via Deepgram Flux ASR for hands-free note taking
 - Multi-language support
 - Advanced NLP model integration
 - Supervisor dashboard for case management

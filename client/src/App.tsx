@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
 import Dashboard from './components/Dashboard';
 import ConversationPanel from './components/ConversationPanel';
@@ -31,7 +31,8 @@ function App() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string>('');
 
-	const API_BASE = 'http://localhost:3000';
+	const API_BASE =
+		import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
 	const handleStartSession = async (officerName: string) => {
 		setLoading(true);

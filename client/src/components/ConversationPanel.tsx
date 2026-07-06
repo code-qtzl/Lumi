@@ -72,7 +72,7 @@ export default function ConversationPanel({
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const mediaStreamRef = useRef<MediaStream | null>(null);
 	const audioChunksRef = useRef<Blob[]>([]);
-	const stopTimeoutRef = useRef<number | null>(null);
+	const autoStopTimeoutRef = useRef<number | null>(null);
 	const tickIntervalRef = useRef<number | null>(null);
 
 	const scrollToBottom = () => {
@@ -85,8 +85,8 @@ export default function ConversationPanel({
 
 	useEffect(() => {
 		return () => {
-			if (stopTimeoutRef.current) {
-				window.clearTimeout(stopTimeoutRef.current);
+			if (autoStopTimeoutRef.current) {
+				window.clearTimeout(autoStopTimeoutRef.current);
 			}
 			if (tickIntervalRef.current) {
 				window.clearInterval(tickIntervalRef.current);
@@ -100,9 +100,9 @@ export default function ConversationPanel({
 	const hasBaseline = Boolean(session.toneState.baseline);
 
 	const resetRecorder = () => {
-		if (stopTimeoutRef.current) {
-			window.clearTimeout(stopTimeoutRef.current);
-			stopTimeoutRef.current = null;
+		if (autoStopTimeoutRef.current) {
+			window.clearTimeout(autoStopTimeoutRef.current);
+			autoStopTimeoutRef.current = null;
 		}
 		if (tickIntervalRef.current) {
 			window.clearInterval(tickIntervalRef.current);
@@ -188,6 +188,15 @@ export default function ConversationPanel({
 						return;
 					}
 
+					if (result.blocked) {
+						setVoiceWarning(
+							result.blockReason ||
+								'Voice transcript confidence is too low. Retry or enter text manually.',
+						);
+						setTranscriptDraft(null);
+						return;
+					}
+
 					setTranscriptDraft({
 						text: result.transcriptOriginal,
 						speaker: result.speaker,
@@ -198,13 +207,6 @@ export default function ConversationPanel({
 						blockReason: result.blockReason,
 						detectedLanguage: result.detectedLanguage,
 					});
-
-					if (result.blocked) {
-						setVoiceWarning(
-							result.blockReason ||
-								'Voice transcript confidence is too low. Retry or enter text manually.',
-						);
-					}
 				} catch (error) {
 					setVoiceWarning(
 						error instanceof Error
@@ -223,9 +225,10 @@ export default function ConversationPanel({
 			tickIntervalRef.current = window.setInterval(() => {
 				setRecordingSeconds((seconds) => seconds + 1);
 			}, 1000);
-			stopTimeoutRef.current = window.setTimeout(() => {
+			const maxDuration = isBaselineCapture ? 5000 : 20000;
+			autoStopTimeoutRef.current = window.setTimeout(() => {
 				recorder.stop();
-			}, 20000);
+			}, maxDuration);
 		} catch {
 			setVoiceWarning(
 				'Microphone permission denied. Voice controls are disabled for this session; continue with manual text entry.',

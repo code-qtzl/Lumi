@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
+import { spawn, execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { createClient, LiveTranscriptionEvents } from '@deepgram/sdk';
 import {
 	Speaker,
 	ToneBaseline,
@@ -13,10 +14,71 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-const DEEPGRAM_URL =
-	'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&punctuate=true&detect_language=true';
 const BLOCK_THRESHOLD = 0.8;
 const MANUAL_CONFIRM_THRESHOLD = 0.88;
+const FFMPEG_BIN = process.env.BEACON_FFMPEG_BIN || 'ffmpeg';
+
+function getEnvNumber(
+	envName: string,
+	fallback: number,
+	min?: number,
+	max?: number,
+): number {
+	const raw = process.env[envName];
+	if (!raw) {
+		return fallback;
+	}
+
+	const parsed = Number(raw);
+	if (!Number.isFinite(parsed)) {
+		return fallback;
+	}
+
+	if (min !== undefined && parsed < min) {
+		return fallback;
+	}
+	if (max !== undefined && parsed > max) {
+		return fallback;
+	}
+
+	return parsed;
+}
+
+const DEEPGRAM_MODEL = process.env.DEEPGRAM_MODEL?.trim() || 'flux-general-en';
+const DEEPGRAM_EOT_THRESHOLD = getEnvNumber(
+	'DEEPGRAM_EOT_THRESHOLD',
+	0.7,
+	0,
+	1,
+);
+const DEEPGRAM_EOT_TIMEOUT_MS = getEnvNumber(
+	'DEEPGRAM_EOT_TIMEOUT_MS',
+	5000,
+	500,
+);
+const STREAM_TIMEOUT_MS = getEnvNumber(
+	'BEACON_VOICE_STREAM_TIMEOUT_MS',
+	6000,
+	1000,
+);
+const FLUSH_TIMEOUT_MS = getEnvNumber(
+	'BEACON_VOICE_FLUSH_TIMEOUT_MS',
+	1200,
+	200,
+);
+
+const CONNECTION_OPTIONS = {
+	model: DEEPGRAM_MODEL,
+	eot_threshold: DEEPGRAM_EOT_THRESHOLD,
+	eot_timeout_ms: DEEPGRAM_EOT_TIMEOUT_MS,
+	encoding: 'linear16',
+	sample_rate: 16000,
+	interim_results: true,
+	vad_events: true,
+	punctuate: true,
+	smart_format: true,
+	detect_language: true,
+};
 
 interface WordTiming {
 	word: string;
@@ -68,6 +130,14 @@ function round2(value: number): number {
 	return Math.round(value * 100) / 100;
 }
 
+function extensionFromMimeType(mimeType: string): string {
+	if (mimeType.includes('webm')) return 'webm';
+	if (mimeType.includes('ogg')) return 'ogg';
+	if (mimeType.includes('wav')) return 'wav';
+	if (mimeType.includes('mp4')) return 'mp4';
+	return 'dat';
+}
+
 function buildMockResult(input: AnalyzeVoiceInput): DeepgramTranscription {
 	const transcriptOriginal =
 		input.speaker === 'traveler'
@@ -89,6 +159,52 @@ function buildMockResult(input: AnalyzeVoiceInput): DeepgramTranscription {
 			3,
 			transcriptOriginal.split(' ').length * 0.34,
 		),
+	};
+}
+
+function parseTranscriptPayload(data: unknown): DeepgramTranscription | null {
+	const payload = data as {
+		type?: string;
+		event?: string;
+		transcript?: string;
+		confidence?: number;
+		is_final?: boolean;
+		speech_final?: boolean;
+		duration?: number;
+		channel?: {
+			alternatives?: Array<{
+				transcript?: string;
+				confidence?: number;
+				words?: WordTiming[];
+				languages?: string[];
+			}>;
+		};
+		metadata?: { language?: string };
+		languages?: string[];
+	};
+
+	const alternative = payload.channel?.alternatives?.[0];
+	const transcript = (
+		payload.transcript ??
+		alternative?.transcript ??
+		''
+	).trim();
+	if (!transcript) {
+		return null;
+	}
+
+	const words = alternative?.words ?? [];
+	const languages = alternative?.languages ?? payload.languages ?? [];
+
+	return {
+		transcriptOriginal: transcript,
+		transcriptForAnalysis: transcript,
+		detectedLanguage: sanitizeLanguage(
+			languages[0] ?? payload.metadata?.language,
+		),
+		confidence: Number(payload.confidence ?? alternative?.confidence ?? 0),
+		words,
+		durationSeconds: Number(payload.duration ?? 0),
 	};
 }
 
@@ -129,10 +245,11 @@ function detectVoiceInstability(words: WordTiming[]): number {
 		return 0;
 	}
 
-	const confidences = words.map((w) => w.confidence || 0.5);
-	const avg = confidences.reduce((sum, c) => sum + c, 0) / confidences.length;
+	const confidences = words.map((word) => word.confidence || 0.5);
+	const average =
+		confidences.reduce((sum, value) => sum + value, 0) / confidences.length;
 	const variance =
-		confidences.reduce((sum, c) => sum + (c - avg) ** 2, 0) /
+		confidences.reduce((sum, value) => sum + (value - average) ** 2, 0) /
 		confidences.length;
 
 	return round2(clamp01(Math.sqrt(variance) * 4.5));
@@ -255,88 +372,6 @@ function buildBaselineFromTone(
 	};
 }
 
-async function runDeepgramRequest(
-	audioBuffer: Buffer,
-	mimeType: string,
-	deepgramApiKey: string,
-): Promise<DeepgramTranscription> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), 6000);
-
-	try {
-		const response = await fetch(DEEPGRAM_URL, {
-			method: 'POST',
-			headers: {
-				Authorization: `Token ${deepgramApiKey}`,
-				'Content-Type': mimeType,
-			},
-			body: new Uint8Array(audioBuffer),
-			signal: controller.signal,
-		});
-
-		if (!response.ok) {
-			const body = await response.text();
-			throw new Error(`Deepgram error (${response.status}): ${body}`);
-		}
-
-		const payload = (await response.json()) as any;
-		const channel = payload?.results?.channels?.[0];
-		const alternative = channel?.alternatives?.[0];
-		const wordsRaw = Array.isArray(alternative?.words)
-			? alternative.words
-			: [];
-
-		const transcriptOriginal = (alternative?.transcript ?? '').trim();
-		const confidence = Number(alternative?.confidence ?? 0);
-		const detectedLanguage = sanitizeLanguage(channel?.detected_language);
-		const durationSeconds = Number(payload?.metadata?.duration ?? 0) || 0;
-
-		const words: WordTiming[] = wordsRaw.map((word: any) => ({
-			word: String(word.word ?? ''),
-			start: Number(word.start ?? 0),
-			end: Number(word.end ?? 0),
-			confidence: Number(word.confidence ?? confidence),
-		}));
-
-		return {
-			transcriptOriginal,
-			transcriptForAnalysis: transcriptOriginal,
-			detectedLanguage,
-			confidence,
-			words,
-			durationSeconds,
-		};
-	} finally {
-		clearTimeout(timer);
-	}
-}
-
-function parseVolumeOutput(stderr: string): number | undefined {
-	const match = stderr.match(/mean_volume:\s*(-?[\d.]+)\s*dB/i);
-	if (!match) {
-		return undefined;
-	}
-
-	return Number(match[1]);
-}
-
-function extensionFromMimeType(mimeType: string): string {
-	if (mimeType.includes('webm')) {
-		return 'webm';
-	}
-	if (mimeType.includes('ogg')) {
-		return 'ogg';
-	}
-	if (mimeType.includes('wav')) {
-		return 'wav';
-	}
-	if (mimeType.includes('mp4')) {
-		return 'mp4';
-	}
-
-	return 'dat';
-}
-
 async function extractSignalMetrics(
 	audioBuffer: Buffer,
 	mimeType: string,
@@ -349,7 +384,7 @@ async function extractSignalMetrics(
 	await fs.writeFile(tempFile, audioBuffer);
 
 	try {
-		const { stderr } = await execFileAsync('ffmpeg', [
+		const { stderr } = await execFileAsync(FFMPEG_BIN, [
 			'-i',
 			tempFile,
 			'-af',
@@ -359,8 +394,9 @@ async function extractSignalMetrics(
 			'-',
 		]);
 
+		const match = stderr.match(/mean_volume:\s*(-?[\d.]+)\s*dB/i);
 		return {
-			meanVolumeDb: parseVolumeOutput(stderr),
+			meanVolumeDb: match ? Number(match[1]) : undefined,
 		};
 	} catch {
 		return {};
@@ -369,20 +405,179 @@ async function extractSignalMetrics(
 	}
 }
 
+async function streamFluxTranscription(
+	audioBuffer: Buffer,
+	mimeType: string,
+	deepgramApiKey: string,
+): Promise<DeepgramTranscription> {
+	const deepgram = createClient(deepgramApiKey).v('v2');
+	const tempFile = path.join(
+		os.tmpdir(),
+		`beacon-flux-${randomUUID()}.${extensionFromMimeType(mimeType)}`,
+	);
+
+	await fs.writeFile(tempFile, audioBuffer);
+
+	try {
+		const socket = deepgram.listen.live(CONNECTION_OPTIONS as any);
+
+		let latestTranscript: DeepgramTranscription | null = null;
+		let finalTranscript: DeepgramTranscription | null = null;
+		let socketError: Error | null = null;
+		let socketOpened = false;
+
+		socket.on(LiveTranscriptionEvents.Open, () => {
+			socketOpened = true;
+		});
+
+		socket.on(LiveTranscriptionEvents.Transcript, (data: unknown) => {
+			const transcript = parseTranscriptPayload(data);
+			if (!transcript) {
+				return;
+			}
+
+			latestTranscript = transcript;
+
+			const message = data as {
+				event?: string;
+				type?: string;
+				is_final?: boolean;
+				speech_final?: boolean;
+			};
+
+			if (
+				message.event === 'EndOfTurn' ||
+				message.type === LiveTranscriptionEvents.UtteranceEnd ||
+				(message.type === 'Results' &&
+					(Boolean(message.is_final) ||
+						Boolean(message.speech_final)))
+			) {
+				finalTranscript = transcript;
+			}
+		});
+
+		socket.on(LiveTranscriptionEvents.Error, (error: Error) => {
+			socketError = error;
+		});
+
+		await new Promise<void>((resolve, reject) => {
+			let didResolve = false;
+			const openTimeout = setTimeout(() => {
+				if (!didResolve) {
+					reject(
+						new Error(
+							'Deepgram Flux connection did not open in time',
+						),
+					);
+				}
+			}, STREAM_TIMEOUT_MS);
+
+			socket.on(LiveTranscriptionEvents.Open, () => {
+				if (didResolve) {
+					return;
+				}
+				didResolve = true;
+				clearTimeout(openTimeout);
+				resolve();
+			});
+
+			socket.on(LiveTranscriptionEvents.Error, (error: Error) => {
+				if (didResolve) {
+					return;
+				}
+				didResolve = true;
+				clearTimeout(openTimeout);
+				reject(error);
+			});
+		});
+
+		if (!socketOpened) {
+			throw new Error('Deepgram Flux socket failed to open');
+		}
+
+		const ffmpeg = spawn(FFMPEG_BIN, [
+			'-loglevel',
+			'quiet',
+			'-i',
+			tempFile,
+			'-f',
+			's16le',
+			'-ar',
+			'16000',
+			'-ac',
+			'1',
+			'-',
+		]);
+
+		ffmpeg.stdout.on('data', (chunk: Buffer) => {
+			(socket as any).sendMedia(chunk);
+		});
+
+		let streamTimeout: NodeJS.Timeout | null = null;
+		await Promise.race([
+			new Promise<void>((resolve, reject) => {
+				ffmpeg.on('error', reject);
+				ffmpeg.on('close', resolve);
+			}),
+			new Promise<void>((_, reject) => {
+				streamTimeout = setTimeout(() => {
+					reject(
+						new Error(
+							'Voice processing timed out while using Deepgram Flux',
+						),
+					);
+				}, STREAM_TIMEOUT_MS);
+			}),
+		]);
+		if (streamTimeout) {
+			clearTimeout(streamTimeout);
+			streamTimeout = null;
+		}
+
+		socket.finalize();
+
+		await new Promise((resolve) => setTimeout(resolve, FLUSH_TIMEOUT_MS));
+		socket.requestClose();
+
+		if (socketError) {
+			throw socketError;
+		}
+
+		const transcript = finalTranscript ?? latestTranscript;
+		if (!transcript) {
+			throw new Error('Deepgram returned no transcript');
+		}
+
+		return transcript;
+	} finally {
+		await fs.unlink(tempFile).catch(() => undefined);
+	}
+}
+
+async function buildDeepgramResult(
+	input: AnalyzeVoiceInput,
+	deepgramApiKey: string,
+): Promise<DeepgramTranscription> {
+	if (!deepgramApiKey) {
+		throw new Error('Deepgram API key is required');
+	}
+
+	return streamFluxTranscription(
+		input.audioBuffer,
+		input.mimeType,
+		deepgramApiKey,
+	);
+}
+
 export async function analyzeVoiceUtterance(
 	input: AnalyzeVoiceInput,
 	options: AnalyzeVoiceOptions,
 ): Promise<VoiceAnalysisResult & { baseline?: ToneBaseline }> {
 	const { deepgramApiKey, allowMockMode } = options;
-
 	let transcription: DeepgramTranscription;
 
 	if (deepgramApiKey) {
-		transcription = await runDeepgramRequest(
-			input.audioBuffer,
-			input.mimeType,
-			deepgramApiKey,
-		);
+		transcription = await buildDeepgramResult(input, deepgramApiKey);
 	} else if (allowMockMode) {
 		transcription = buildMockResult(input);
 	} else {
@@ -393,7 +588,6 @@ export async function analyzeVoiceUtterance(
 		input.audioBuffer,
 		input.mimeType,
 	);
-
 	const toneSignals =
 		input.speaker === 'traveler'
 			? calculateToneSummary(transcription, input.baseline, signalMetrics)
@@ -403,7 +597,6 @@ export async function analyzeVoiceUtterance(
 	const requiresManualConfirm =
 		transcription.confidence >= BLOCK_THRESHOLD &&
 		transcription.confidence < MANUAL_CONFIRM_THRESHOLD;
-
 	const baseline =
 		input.isBaselineCapture && toneSignals
 			? buildBaselineFromTone(toneSignals, input.reasonTag ?? 'initial')

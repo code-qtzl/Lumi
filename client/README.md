@@ -23,6 +23,12 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+### Environment Variables
+
+Copy `client/.env.example` to `client/.env` and adjust the API URL if needed.
+
+- `VITE_API_BASE_URL` defaults to `http://localhost:3000`
+
 ### Running the Linter
 
 ```bash
