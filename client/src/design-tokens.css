@@ -1,0 +1,121 @@
+/* Design System Tokens - Beacon App */
+
+:root {
+	/* --- BACKGROUNDS --- */
+	--color-bg: #faf7f2; /* warm off-white, like aged paper */
+	--color-bg-warm: #f5f0e8; /* slightly warmer for alternating modules */
+	--color-bg-code: #1e1e2e; /* deep indigo-charcoal for code blocks */
+	--color-text: #2c2a28; /* dark charcoal, easy on eyes */
+	--color-text-secondary: #6b6560; /* warm gray for secondary text */
+	--color-text-muted: #9e9790; /* muted for timestamps, labels */
+	--color-border: #e5dfd6; /* subtle warm border */
+	--color-border-light: #eeebe5; /* even lighter border */
+	--color-surface: #ffffff; /* card surfaces */
+	--color-surface-warm: #fdf9f3; /* warm card surface */
+
+	/* --- ACCENT (Navy blue for authority + calm professional) --- */
+	--color-accent: #1b4965; /* Professional navy blue */
+	--color-accent-hover: #0d2a42; /* Darker navy on hover */
+	--color-accent-light: #e8eff5; /* Light navy background */
+	--color-accent-muted: #5a7a94; /* Muted navy */
+
+	/* --- SEMANTIC (adapted to theme) --- */
+	--color-success: #2d8b55; /* Forest green for safe */
+	--color-success-light: #e8f5ee;
+	--color-error: #c93b3b; /* Red for urgent/unsafe */
+	--color-error-light: #fde8e8;
+	--color-warning: #d4a843; /* Amber for risky/caution */
+	--color-warning-light: #fff4e6;
+	--color-info: #2a7b9b; /* Teal for info */
+	--color-info-light: #e4f2f7;
+
+	/* --- FONTS --- */
+	--font-display: 'Bricolage Grotesque', Georgia, serif;
+	--font-body: 'DM Sans', -apple-system, sans-serif;
+	--font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+	/* --- TYPE SCALE (1.25 ratio) --- */
+	--text-xs: 0.75rem; /* 12px — labels, badges */
+	--text-sm: 0.875rem; /* 14px — secondary text */
+	--text-base: 1rem; /* 16px — body text */
+	--text-lg: 1.125rem; /* 18px — lead paragraphs */
+	--text-xl: 1.25rem; /* 20px — screen headings */
+	--text-2xl: 1.5rem; /* 24px — sub-module titles */
+	--text-3xl: 1.875rem; /* 30px — module subtitles */
+	--text-4xl: 2.25rem; /* 36px — module titles */
+	--text-5xl: 3rem; /* 48px — hero text */
+	--text-6xl: 3.75rem; /* 60px — display text */
+
+	/* --- LINE HEIGHTS --- */
+	--leading-tight: 1.15;
+	--leading-snug: 1.3;
+	--leading-normal: 1.6;
+	--leading-loose: 1.8;
+
+	/* --- SPACING SCALE --- */
+	--space-0: 0;
+	--space-1: 0.25rem; /* 4px */
+	--space-2: 0.5rem; /* 8px */
+	--space-3: 0.75rem; /* 12px */
+	--space-4: 1rem; /* 16px */
+	--space-5: 1.25rem; /* 20px */
+	--space-6: 1.5rem; /* 24px */
+	--space-8: 2rem; /* 32px */
+	--space-10: 2.5rem; /* 40px */
+	--space-12: 3rem; /* 48px */
+	--space-16: 4rem; /* 64px */
+
+	/* --- SHADOWS --- */
+	--shadow-sm: 0 1px 2px rgba(44, 42, 40, 0.05);
+	--shadow-md: 0 4px 6px rgba(44, 42, 40, 0.1);
+	--shadow-lg: 0 10px 15px rgba(44, 42, 40, 0.15);
+	--shadow-xl: 0 20px 25px rgba(44, 42, 40, 0.2);
+	--shadow-2xl: 0 25px 50px rgba(44, 42, 40, 0.25);
+
+	/* --- BORDER RADIUS --- */
+	--radius-sm: 0.25rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 1rem;
+	--radius-xl: 1.5rem;
+	--radius-full: 9999px;
+
+	/* --- TRANSITIONS --- */
+	--transition-fast: 150ms ease-in-out;
+	--transition-base: 200ms ease-in-out;
+	--transition-slow: 300ms ease-in-out;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: var(--font-body);
+	font-size: var(--text-base);
+	line-height: var(--leading-normal);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--color-bg-warm);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-accent-muted);
+	border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-accent);
+}

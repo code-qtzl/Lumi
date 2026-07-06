@@ -1,94 +1,135 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-
-interface Message {
-	id: number;
-	name: string;
-	message: string;
-	timestamp: string;
-}
+import Dashboard from './components/Dashboard';
+import ConversationPanel from './components/ConversationPanel';
+import RiskCard from './components/RiskCard';
+import SessionInit from './components/SessionInit';
+import type { InterviewSession } from './types';
 
 function App() {
-	const [messages, setMessages] = useState<Message[]>([]); // State to hold messages
-	const [name, setName] = useState(''); // State for the name input
-	const [message, setMessage] = useState(''); // State for the message input
+  const [session, setSession] = useState<InterviewSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
-	useEffect(() => {
-		fetchMessages(); // Fetch messages when the component mounts
-	}, []);
+  const API_BASE = 'http://localhost:3000';
 
-	const fetchMessages = async () => {
-		try {
-			const response = await fetch('http://localhost:3000/messages');
-			const data = await response.json();
-			setMessages(data);
-		} catch (error) {
-			console.error('Error fetching messages:', error);
-		}
-	};
+  const handleStartSession = async (officerName: string) => {
+    setLoading(true);
+    setError('');
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault(); // Prevent form submission from reloading the page
-		if (!name.trim() || !message.trim()) return;
+    try {
+      const response = await fetch(`${API_BASE}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ officerName }),
+      });
 
-		try {
-			const response = await fetch('http://localhost:3000/messages', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, message }),
-			});
+      if (!response.ok) throw new Error('Failed to create session');
 
-			if (response.ok) {
-				setName('');
-				setMessage('');
-				fetchMessages();
-			}
-		} catch (error) {
-			console.error('Error posting message:', error);
-		}
-	};
+      const newSession = await response.json();
+      setSession(newSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-	return (
-		<div className='App'>
-			<h1>Beacon App</h1>
-			<div className='messages'>
-				{messages.length === 0 ? (
-					<p className='no-messages'>No messages yet.</p>
-				) : (
-					messages
-						.slice()
-						.reverse()
-						.map((msg) => (
-							<div key={msg.id} className='message'>
-								<strong>{msg.name}</strong>
-								<p>{msg.message}</p>
-								<small>
-									{new Date(msg.timestamp).toLocaleString()}
-								</small>
-							</div>
-						))
-				)}
-			</div>
+  const handleSendMessage = async (message: string) => {
+    if (!session) return;
 
-			<div className='post-section'>
-				<h2>Post a Message</h2>
-				<form onSubmit={handleSubmit}>
-					<input
-						type='text'
-						placeholder='Your name'
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-					/>
-					<textarea
-						placeholder='Your message'
-						value={message}
-						onChange={(e) => setMessage(e.target.value)}
-					/>
-					<button type='submit'>Post Message</button>
-				</form>
-			</div>
-		</div>
-	);
+    try {
+      const response = await fetch(
+        `${API_BASE}/sessions/${session.id}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message }),
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to send message');
+
+      const result = await response.json();
+
+      // Update session with new messages and risk data
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: prev.messages.concat([
+            result.message,
+            result.assistantMessage,
+          ]),
+          currentRiskLevel: result.sessionUpdated.currentRiskLevel,
+          allIndicators: result.sessionUpdated.allIndicators,
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send message');
+    }
+  };
+
+  const handleUpdateNotes = async (notes: string) => {
+    if (!session) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/sessions/${session.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update notes');
+
+      const updated = await response.json();
+      setSession(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update notes');
+    }
+  };
+
+  if (!session) {
+    return <SessionInit onStart={handleStartSession} loading={loading} error={error} />;
+  }
+
+  return (
+    <div className="app">
+      <header className="app-header">
+        <h1>Beacon Interview Assistant</h1>
+        <p className="subtitle">Trauma-Informed Risk Scoring Tool</p>
+      </header>
+
+      {error && <div className="error-banner">{error}</div>}
+
+      <main className="app-main">
+        <aside className="app-sidebar">
+          <Dashboard
+            session={session}
+            onUpdateNotes={handleUpdateNotes}
+          />
+        </aside>
+
+        <section className="app-content">
+          <ConversationPanel
+            messages={session.messages}
+            onSendMessage={handleSendMessage}
+          />
+        </section>
+
+        <aside className="app-risk-panel">
+          <RiskCard
+            riskLevel={session.currentRiskLevel}
+            indicators={session.allIndicators}
+            confidence={
+              session.messages.find((m) => m.riskAssessment)?.riskAssessment
+                ?.confidence || 50
+            }
+          />
+        </aside>
+      </main>
+    </div>
+  );
 }
 
 export default App;
