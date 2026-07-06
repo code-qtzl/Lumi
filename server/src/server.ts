@@ -255,6 +255,7 @@ app.post('/sessions/:id/messages', (req, res) => {
 			currentRiskLevel: session.currentRiskLevel,
 			currentDisplayRiskLevel: session.currentDisplayRiskLevel,
 			allIndicators: session.allIndicators,
+			toneState: session.toneState,
 		},
 	});
 });

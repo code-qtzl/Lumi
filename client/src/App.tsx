@@ -96,6 +96,7 @@ function App() {
 					currentDisplayRiskLevel:
 						result.sessionUpdated.currentDisplayRiskLevel,
 					allIndicators: result.sessionUpdated.allIndicators,
+					toneState: result.sessionUpdated.toneState ?? prev.toneState,
 				};
 			});
 		} catch (err) {
