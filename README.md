@@ -16,7 +16,9 @@ A web-based AI assistant for airport and transit officers that guides trauma-inf
 ## Features
 
 ### Risk Indicators
+
 Analyzes for indicators in these categories:
+
 - **Travel Control**: Document control, itinerary concerns
 - **Document Control**: Passport/visa issues, third-party control
 - **Coercion Indicators**: Threats, pressure, debt bondage
@@ -25,18 +27,21 @@ Analyzes for indicators in these categories:
 - **Urgent Safety Concern**: Immediate threats requiring escalation
 
 ### Officer Dashboard
+
 - Session status and timeline
 - Risk indicator summary
 - Session notes (persisted)
 - Trauma-informed guidance reference
 
 ### Conversation Panel
+
 - Chat-style message interface
 - Officer observations and traveler responses
 - Real-time risk assessment display
 - AI-generated guidance and follow-up suggestions
 
 ### Risk Assessment Card
+
 - Real-time risk level display (Safe/Risky/Unsafe)
 - Confidence score (0-100%)
 - Categorized risk indicators with evidence
@@ -53,6 +58,7 @@ Analyzes for indicators in these categories:
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm
 
@@ -66,6 +72,7 @@ npm run install:all
 ### Running the Application
 
 **Terminal 1 - Start the Backend Server:**
+
 ```bash
 cd server
 npm run server
@@ -73,6 +80,7 @@ npm run server
 ```
 
 **Terminal 2 - Start the Frontend Dev Server:**
+
 ```bash
 cd client
 npm run dev
@@ -84,54 +92,63 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ## API Endpoints
 
 ### Sessions
+
 - `POST /sessions` - Create a new interview session
-  - Body: `{ officerName: string }`
-  - Returns: `InterviewSession`
+    - Body: `{ officerName: string }`
+    - Returns: `InterviewSession`
 
 - `GET /sessions/:id` - Get session details
-  - Returns: `InterviewSession`
+    - Returns: `InterviewSession`
 
 - `PUT /sessions/:id` - Update session notes
-  - Body: `{ notes: string }`
-  - Returns: `InterviewSession`
+    - Body: `{ notes: string }`
+    - Returns: `InterviewSession`
 
 ### Messages & Analysis
+
 - `POST /sessions/:id/messages` - Send officer observation/response
-  - Body: `{ content: string }`
-  - Returns: `{ message, riskAssessment, assistantMessage, sessionUpdated }`
+    - Body: `{ content: string }`
+    - Returns: `{ message, riskAssessment, assistantMessage, sessionUpdated }`
 
 - `POST /sessions/:id/check-guardrails` - Validate question for guardrails
-  - Body: `{ question: string }`
-  - Returns: `GuardrailFeedback`
+    - Body: `{ question: string }`
+    - Returns: `GuardrailFeedback`
 
 ## Risk Scoring Algorithm
 
 The system analyzes messages for keywords in each category and assigns:
+
 - **Risk Score**: Incremented based on matched keywords and severity
 - **Risk Level**:
-  - Safe (0-3 points)
-  - Risky (4-7 points)
-  - Unsafe (8+ points or urgent keywords)
+    - Safe (0-3 points)
+    - Risky (4-7 points)
+    - Unsafe (8+ points or urgent keywords)
 - **Confidence**: Based on keyword matches and situation urgency
 
 ### Example Keywords by Category
 
 **Travel Control**
+
 - "someone else has", "not my passport", "borrowed", "itinerary planned by"
 
 **Document Control**
+
 - "passport held by", "documents taken", "visa issues"
 
 **Coercion**
+
 - "threatened", "forced", "family pressure", "debt", "promised"
 
 **Inconsistency**
+
 - "don't know", "confused about", "different story"
 
 **Vulnerable Person**
+
 - "child", "minor", "elderly", "pregnant", "alone"
 
 **Urgent Safety**
+
 - "immediate threat", "danger", "emergency", "in danger", "trafficking"
 
 ## Design System
@@ -139,17 +156,20 @@ The system analyzes messages for keywords in each category and assigns:
 The application uses a warm, professional design system with:
 
 **Color Palette**
+
 - **Primary**: Navy blue (#1B4965) - authority and calm
 - **Background**: Warm off-white (#FAF7F2)
 - **Accents**: Green (safe), Amber (caution), Red (urgent)
 - **Text**: Dark charcoal (#2C2A28)
 
 **Typography**
+
 - **Display**: Bricolage Grotesque (bold, distinctive)
 - **Body**: DM Sans (readable, professional)
 - **Mono**: JetBrains Mono (code)
 
 **Principles**
+
 - Calm, non-alarming interface
 - Professional decision-support tool aesthetic
 - Accessibility and clarity prioritized
@@ -164,6 +184,15 @@ The application uses a warm, professional design system with:
 5. **Continues Questioning** - Officer enters follow-up observations
 6. **Escalation** - System recommends immediate escalation if unsafe indicators detected
 7. **Session Notes** - Officer documents observations and next steps
+
+## Diagrams
+
+- Combined diagrams page: [docs/diagrams.md](docs/diagrams.md)
+- Mermaid source files:
+    - [docs/user-flow.mmd](docs/user-flow.mmd)
+    - [docs/technical-architecture.mmd](docs/technical-architecture.mmd)
+    - [docs/process-sequence.mmd](docs/process-sequence.mmd)
+    - [docs/risk-state.mmd](docs/risk-state.mmd)
 
 ## Trauma-Informed Principles
 

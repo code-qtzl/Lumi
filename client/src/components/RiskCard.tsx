@@ -1,10 +1,19 @@
-import type { RiskLevel, RiskIndicator } from '../types';
+import type {
+	DisplayRiskLevel,
+	RiskLevel,
+	RiskIndicator,
+	RiskOverrideAuditEntry,
+	ToneState,
+} from '../types';
 import './RiskCard.css';
 
 interface RiskCardProps {
 	riskLevel: RiskLevel;
+	displayRiskLevel?: DisplayRiskLevel;
 	indicators: RiskIndicator[];
 	confidence: number;
+	toneState: ToneState;
+	riskOverrideAudit: RiskOverrideAuditEntry[];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -18,9 +27,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function RiskCard({
 	riskLevel,
+	displayRiskLevel,
 	indicators,
 	confidence,
+	toneState,
+	riskOverrideAudit,
 }: RiskCardProps) {
+	const displayLabel = (displayRiskLevel || riskLevel).toUpperCase();
 	const indicatorsByCategory = indicators.reduce(
 		(acc, indicator) => {
 			if (!acc[indicator.category]) {
@@ -37,10 +50,40 @@ export default function RiskCard({
 			<div className={`risk-level-display risk-level-${riskLevel}`}>
 				<h2>Risk Level</h2>
 				<div className='risk-status'>
-					<span className='risk-badge'>
-						{riskLevel.toUpperCase()}
-					</span>
+					<span className='risk-badge'>{displayLabel}</span>
 					<span className='confidence'>{confidence}% Confidence</span>
+				</div>
+				<p className='risk-caption'>
+					Internal model state: {riskLevel}
+				</p>
+			</div>
+
+			<div className='tone-state-section'>
+				<h3>Tone State</h3>
+				<div className='tone-state-grid'>
+					<div>
+						<span className='tone-state-label'>Baseline</span>
+						<strong>
+							{toneState.baseline
+								? `Captured (${toneState.baseline.reasonTag})`
+								: 'Pending'}
+						</strong>
+					</div>
+					<div>
+						<span className='tone-state-label'>Tone Concern</span>
+						<strong>
+							{toneState.toneRaisedConcernActive
+								? 'Active'
+								: 'Inactive'}
+						</strong>
+					</div>
+					<div>
+						<span className='tone-state-label'>Decay Counter</span>
+						<strong>
+							{toneState.consecutiveNormalTravelerUtterances}/3
+							normal traveler utterances
+						</strong>
+					</div>
 				</div>
 			</div>
 
@@ -117,6 +160,37 @@ export default function RiskCard({
 						</div>
 					)}
 				</div>
+			</div>
+
+			<div className='audit-section'>
+				<h3>Override Audit</h3>
+				{riskOverrideAudit.length === 0 ? (
+					<p className='no-indicators'>No overrides recorded.</p>
+				) : (
+					<div className='audit-list'>
+						{riskOverrideAudit
+							.slice(-3)
+							.reverse()
+							.map((entry) => (
+								<div key={entry.id} className='audit-item'>
+									<strong>
+										{entry.previousLevel} to{' '}
+										{entry.nextLevel}
+									</strong>
+									<p>{entry.justification}</p>
+									<small>
+										{entry.createdBy} ·{' '}
+										{new Date(
+											entry.createdAt,
+										).toLocaleString()}
+										{entry.supervisorAcknowledged
+											? ' · Supervisor acknowledged'
+											: ''}
+									</small>
+								</div>
+							))}
+					</div>
+				)}
 			</div>
 		</div>
 	);
