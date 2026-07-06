@@ -101,6 +101,7 @@ export interface VoiceAnalysisResult {
 	speaker: Speaker;
 	toneSignals?: ToneSignalSummary;
 	baselineCaptured: boolean;
+	baseline?: ToneBaseline;
 }
 
 export interface GuardrailFeedback {

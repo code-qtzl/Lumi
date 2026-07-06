@@ -577,7 +577,7 @@ async function buildDeepgramResult(
 export async function analyzeVoiceUtterance(
 	input: AnalyzeVoiceInput,
 	options: AnalyzeVoiceOptions,
-): Promise<VoiceAnalysisResult & { baseline?: ToneBaseline }> {
+): Promise<VoiceAnalysisResult> {
 	const { deepgramApiKey, allowMockMode } = options;
 	let transcription: DeepgramTranscription;
 
