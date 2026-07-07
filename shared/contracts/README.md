@@ -14,9 +14,15 @@ here is a proposal to argue with at the split conversation, not a decision.
 Rules of the road (proposed):
 
 - Changing a schema or an ID = ping the whole team before merge.
-- IDs are stable; display names/descriptions can iterate freely.
-- `examples/` contains one valid instance of each schema — kept in sync (CI-checkable
-  later with `jsonschema`/`ajv`).
+- IDs are stable and pattern-constrained (`t\d{3}` turns, `sess-*`, `rpt-*`, kebab-case
+  scenario ids); display names/descriptions can iterate freely.
+- Schemas are strict (`additionalProperties: false`): adding a field = a schema PR, not
+  a side channel. Revert per-schema if this hurts mid-sprint.
+- `python3 validate.py` checks schema validity + cross-file integrity (dimension ids vs
+  rubric, anchors vs turn ids, indicators vs catalog, version + id linkage). Run it after
+  touching anything here; wire into CI when CI exists.
+- Companion speech gets its own turn role (`companion`), so indicators like
+  `third-party-answers` are detectable from the transcript.
 
 Open questions for the split conversation:
 

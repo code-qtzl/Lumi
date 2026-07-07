@@ -4,16 +4,18 @@
 	"title": "Feedback report",
 	"description": "Rubric-scored feedback on ONE session. Every dimension score must carry anchors (turn_ids). This object is what the eval harness judges for faithfulness.",
 	"type": "object",
+	"additionalProperties": false,
 	"required": ["report_id", "session_id", "scenario_id", "rubric_version", "dimensions", "decision_outcome", "summary"],
 	"properties": {
-		"report_id": { "type": "string" },
-		"session_id": { "type": "string" },
-		"scenario_id": { "type": "string" },
+		"report_id": { "type": "string", "pattern": "^rpt-[a-z0-9-]+$" },
+		"session_id": { "type": "string", "pattern": "^sess-[a-z0-9-]+$" },
+		"scenario_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
 		"rubric_version": { "type": "string", "description": "Matches rubric.json version." },
 		"dimensions": {
 			"type": "array",
 			"items": {
 				"type": "object",
+				"additionalProperties": false,
 				"required": ["dimension_id", "score", "rationale", "anchors"],
 				"properties": {
 					"dimension_id": { "type": "string", "description": "From rubric.json." },
@@ -21,7 +23,7 @@
 					"rationale": { "type": "string" },
 					"anchors": {
 						"type": "array",
-						"items": { "type": "string" },
+						"items": { "type": "string", "pattern": "^t\\d{3}$" },
 						"description": "turn_ids supporting the rationale. May be empty ONLY when nothing in the session exercised this dimension (then say so in rationale)."
 					}
 				}
@@ -32,9 +34,10 @@
 			"description": "Debrief modeling: better question at a flagged moment. Optional feature tier.",
 			"items": {
 				"type": "object",
+				"additionalProperties": false,
 				"required": ["turn_id", "suggested_question", "why"],
 				"properties": {
-					"turn_id": { "type": "string", "description": "The trainee turn being improved." },
+					"turn_id": { "type": "string", "pattern": "^t\\d{3}$", "description": "The trainee turn being improved." },
 					"suggested_question": { "type": "string" },
 					"why": { "type": "string" }
 				}
@@ -42,6 +45,7 @@
 		},
 		"decision_outcome": {
 			"type": "object",
+			"additionalProperties": false,
 			"required": ["trainee_decision", "ground_truth_type", "appropriate"],
 			"properties": {
 				"trainee_decision": { "enum": ["refer", "no_action"] },
