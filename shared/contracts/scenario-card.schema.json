@@ -1,0 +1,59 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "beacon/scenario-card",
+	"title": "Scenario card",
+	"description": "One practice scenario. 'ground_truth' and 'reveal' are hidden from the trainee until the debrief.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["scenario_id", "title", "persona", "role_play_instructions", "emotional_presentation", "ground_truth", "reveal"],
+	"properties": {
+		"scenario_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "Stable ID, kebab-case, e.g. 'father-daughter-holiday'" },
+		"title": { "type": "string" },
+		"difficulty": { "type": "integer", "minimum": 1, "maximum": 3 },
+		"persona": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name", "traveling_with", "backstory"],
+			"properties": {
+				"name": { "type": "string" },
+				"traveling_with": { "type": "string", "description": "Who is present at the encounter, e.g. 'her father', 'an older acquaintance'" },
+				"backstory": { "type": "string", "description": "What is actually going on, written for the role-play model. Synthetic only." }
+			}
+		},
+		"role_play_instructions": {
+			"type": "string",
+			"description": "How the traveler behaves: what they volunteer, what they deflect, how they respond to open vs. accusatory questions."
+		},
+		"emotional_presentation": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["label"],
+			"properties": {
+				"label": { "type": "string", "description": "e.g. 'ordinary-nervous', 'coached', 'frightened', 'flat'" },
+				"voice_direction": { "type": "string", "description": "Acting instruction for the voice model. Required in practice for voice-mode scenarios; optional for text-only." }
+			}
+		},
+		"ground_truth": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["type", "indicators_present"],
+			"properties": {
+				"type": { "enum": ["trafficking", "innocent"] },
+				"indicators_present": {
+					"type": "array",
+					"items": { "type": "string", "description": "indicator_id from indicator-catalog.json" },
+					"description": "Empty array for most innocent scenarios (an innocent scenario MAY still contain a benign-explanation indicator)."
+				}
+			}
+		},
+		"reveal": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["summary", "teaching_points"],
+			"properties": {
+				"summary": { "type": "string", "description": "Shown to trainee in debrief: what was actually going on." },
+				"teaching_points": { "type": "array", "items": { "type": "string" } }
+			}
+		}
+	}
+}

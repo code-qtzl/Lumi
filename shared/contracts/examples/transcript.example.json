@@ -1,0 +1,19 @@
+{
+	"session_id": "sess-2026-07-06-0001",
+	"scenario_id": "father-daughter-holiday",
+	"mode": "text",
+	"started_at": "2026-07-06T18:00:00Z",
+	"ended_at": "2026-07-06T18:04:30Z",
+	"turns": [
+		{ "turn_id": "t001", "role": "trainee", "text": "Hi there — long day of travel? Where are you two headed?", "timestamp": "2026-07-06T18:00:05Z", "audio_ref": null },
+		{ "turn_id": "t002", "role": "traveler", "text": "Yeah. Chicago. Grandma's.", "timestamp": "2026-07-06T18:00:12Z", "audio_ref": null },
+		{ "turn_id": "t003", "role": "trainee", "text": "He's not your dad, is he? You can tell me the truth.", "timestamp": "2026-07-06T18:00:25Z", "audio_ref": null },
+		{ "turn_id": "t004", "role": "traveler", "text": "What? He IS my dad. Dad, this lady thinks—", "timestamp": "2026-07-06T18:00:31Z", "audio_ref": null },
+		{ "turn_id": "t005", "role": "trainee", "text": "Sorry, routine question. What's the plan when you land — who's picking you up?", "timestamp": "2026-07-06T18:00:45Z", "audio_ref": null },
+		{ "turn_id": "t006", "role": "traveler", "text": "Grandma. She's making pierogi, it's kind of a whole thing.", "timestamp": "2026-07-06T18:00:52Z", "audio_ref": null }
+	],
+	"decision": {
+		"value": "no_action",
+		"stated_reason": "Consistent itinerary knowledge, spontaneous family detail, no behavioral indicators."
+	}
+}

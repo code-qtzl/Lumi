@@ -1,0 +1,47 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "beacon/transcript",
+	"title": "Session transcript",
+	"description": "One completed practice session. turn_ids are stable and are the anchor targets for all feedback claims.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["session_id", "scenario_id", "mode", "started_at", "ended_at", "turns", "decision"],
+	"properties": {
+		"session_id": { "type": "string", "pattern": "^sess-[a-z0-9-]+$" },
+		"scenario_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+		"mode": { "enum": ["text", "voice"] },
+		"started_at": { "type": "string", "format": "date-time" },
+		"ended_at": { "type": "string", "format": "date-time" },
+		"turns": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["turn_id", "role", "text"],
+				"properties": {
+					"turn_id": { "type": "string", "pattern": "^t\\d{3}$", "description": "Stable, ordered: 't001', 't002', …" },
+					"role": {
+						"enum": ["trainee", "traveler", "companion"],
+						"description": "'companion' = a third party present in the scenario (e.g. the person a traveler defers to). The engine may voice companions; indicators like third-party-answers depend on companion turns being distinguishable."
+					},
+					"text": { "type": "string", "description": "Verbatim text (voice mode: transcription)." },
+					"timestamp": { "type": "string", "format": "date-time" },
+					"audio_ref": {
+						"type": ["string", "null"],
+						"description": "Reference to stored audio for this turn (voice mode), else null. Storage scheme TBD at split."
+					}
+				}
+			}
+		},
+		"decision": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["value"],
+			"properties": {
+				"value": { "enum": ["refer", "no_action"], "description": "Trainee's committed decision at session end." },
+				"stated_reason": { "type": "string", "description": "Optional: trainee's one-line reason, useful for feedback + eval." }
+			}
+		}
+	}
+}
