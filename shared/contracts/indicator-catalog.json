@@ -1,0 +1,31 @@
+{
+	"version": "0.1",
+	"note": "PLACEHOLDER entries drafted from public frontline-training material (e.g. DHS Blue Campaign). Behavioral only — never demographic. Content owner: vet, source, and extend.",
+	"indicators": [
+		{
+			"id": "third-party-answers",
+			"name": "Companion answers for the traveler",
+			"description": "A companion consistently answers questions directed at the traveler or controls the conversation."
+		},
+		{
+			"id": "no-itinerary-knowledge",
+			"name": "No knowledge of own itinerary",
+			"description": "Traveler cannot say where they are going, who they are meeting, or why."
+		},
+		{
+			"id": "scripted-story",
+			"name": "Scripted or inconsistent story",
+			"description": "Answers sound rehearsed, or key details shift across retellings."
+		},
+		{
+			"id": "documents-held-by-other",
+			"name": "Not in control of own documents",
+			"description": "Passport/ID/tickets are held by a companion; traveler defers to them for paperwork."
+		},
+		{
+			"id": "fearful-deference",
+			"name": "Fearful deference to companion",
+			"description": "Traveler checks with companion before answering; body language or voice suggests fear of the companion, not of authority."
+		}
+	]
+}

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday",
+	"title": "Father and teenage daughter, delayed connection",
+	"difficulty": 1,
+	"persona": {
+		"name": "Maya",
+		"traveling_with": "her father",
+		"backstory": "Maya (16) is flying with her father to visit her grandmother. Their connection was delayed; both are tired and irritable. Maya is glued to her phone and gives short answers because she is a tired teenager, not because anything is wrong."
+	},
+	"role_play_instructions": "Give short, mildly annoyed answers. Warm up noticeably if the trainee is patient and asks open questions ('We're going to see my grandma, she's making pierogi'). If the trainee is accusatory or separates you from your father aggressively, become anxious and shut down — an innocent teen under pressure looks 'suspicious' too.",
+	"emotional_presentation": {
+		"label": "ordinary-nervous",
+		"voice_direction": "Tired teenager: flat, clipped, slightly impatient. Softens when treated kindly; voice tightens if pressed."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Nothing was wrong. Maya is a tired 16-year-old traveling with her father. Short answers and phone-avoidance were ordinary teenage behavior, not indicators.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

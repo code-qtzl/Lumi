@@ -1,0 +1,52 @@
+{
+	"report_id": "rpt-2026-07-06-0001",
+	"session_id": "sess-2026-07-06-0001",
+	"scenario_id": "father-daughter-holiday",
+	"rubric_version": "0.1",
+	"dimensions": [
+		{
+			"dimension_id": "open-questions",
+			"score": 3,
+			"rationale": "Opened well with an invitational question (t001) and recovered with an open itinerary question (t005), but t003 was a leading, suggestive question that presupposed deception.",
+			"anchors": ["t001", "t003", "t005"]
+		},
+		{
+			"dimension_id": "trauma-informed-language",
+			"score": 2,
+			"rationale": "\"He's not your dad, is he? You can tell me the truth\" (t003) is accusatory and pressuring; it visibly distressed the traveler (t004). Recovery at t005 was good but the pattern to avoid is the accusation itself.",
+			"anchors": ["t003", "t004"]
+		},
+		{
+			"dimension_id": "indicator-recognition",
+			"score": 4,
+			"rationale": "Correctly weighed itinerary knowledge and the spontaneous family detail (t002, t006) as benign signals; did not invent indicators that were absent.",
+			"anchors": ["t002", "t006"]
+		},
+		{
+			"dimension_id": "false-positive-discipline",
+			"score": 3,
+			"rationale": "Final decision avoided a false positive, but t003 shows escalation on a hunch with no behavioral basis — on a higher-stakes scenario that move burdens an innocent family.",
+			"anchors": ["t003"]
+		},
+		{
+			"dimension_id": "referral-protocol",
+			"score": 3,
+			"rationale": "No referral was appropriate here; nothing in this session exercised the referral pathway beyond the final decision.",
+			"anchors": []
+		}
+	],
+	"modeled_alternatives": [
+		{
+			"turn_id": "t003",
+			"suggested_question": "Who are you traveling with today?",
+			"why": "Open version elicits the same information without accusing; an innocent traveler relaxes, and a coached traveler's rehearsed answer becomes more visible against an open prompt."
+		}
+	],
+	"decision_outcome": {
+		"trainee_decision": "no_action",
+		"ground_truth_type": "innocent",
+		"appropriate": true,
+		"note": "Correct outcome with sound stated reasoning."
+	},
+	"summary": "Strong open-question instincts at t001 and t005 and a correct final decision, undermined by one accusatory moment (t003) that distressed the traveler. Focus area: eliciting the same facts through open prompts instead of accusations."
+}

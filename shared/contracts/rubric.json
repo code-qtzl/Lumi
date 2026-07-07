@@ -1,0 +1,35 @@
+{
+	"version": "0.1",
+	"scale": {
+		"min": 1,
+		"max": 5,
+		"meaning": "1 = counterproductive, 3 = adequate, 5 = model technique"
+	},
+	"dimensions": [
+		{
+			"id": "open-questions",
+			"name": "Open vs. leading questions",
+			"description": "Ratio and placement of open/invitational prompts vs. leading, suggestive, or rapid yes/no questions."
+		},
+		{
+			"id": "trauma-informed-language",
+			"name": "Trauma-informed language",
+			"description": "Non-accusatory tone, no blame or disbelief cues, pacing that doesn't pressure."
+		},
+		{
+			"id": "indicator-recognition",
+			"name": "Indicator recognition",
+			"description": "Noticed the behavioral indicators actually present (per scenario ground truth) without inventing absent ones."
+		},
+		{
+			"id": "false-positive-discipline",
+			"name": "False-positive discipline",
+			"description": "On innocent scenarios: avoided escalating on demographic or superficial cues."
+		},
+		{
+			"id": "referral-protocol",
+			"name": "Referral protocol",
+			"description": "Referred/reported through the correct channel rather than confronting, accusing, or attempting rescue."
+		}
+	]
+}
