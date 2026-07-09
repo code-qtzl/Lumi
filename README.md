@@ -19,7 +19,7 @@ Then open your browser to `http://localhost:5173`
 <details>
 <summary>NPM Setup (no Docker)</summary>
 
-**Prerequisites:** Node.js (v16 or higher) and npm or yarn
+**Prerequisites:** Node.js 22.x and npm 11.x
 
 1. Install dependencies for both client and server:
 
@@ -44,6 +44,29 @@ npm run dev
 4. Open your browser to `http://localhost:5173`
 
 </details>
+
+## Developer Quickstart
+
+For a fast local development setup:
+
+```bash
+# install both server and client deps from the repo root
+npm run install:all
+
+# start the server in one terminal
+cd server
+npm run server
+
+# start the client in another terminal
+cd client
+npm run dev
+```
+
+Then open `http://localhost:5173`.
+
+If you need environment variables for the server, copy `server/.env.example` to `server/.env`.
+
+The repository also includes an active CI workflow at `.github/workflows/ci.yml` that runs on pull requests and pushes to `main`.
 
 ## Project Structure
 

@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"scripts": {
 		"server": "ts-node src/server.ts",
+		"typecheck": "tsc --noEmit",
 		"dev": "echo \"🫣 Wrong folder?: 'npm run dev' should be run in ./client directory\" && echo \"💡 Try: 'cd client && npm run dev'\" && exit 1"
 	},
 	"dependencies": {
