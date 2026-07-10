@@ -6,6 +6,7 @@
 		"typecheck": "tsc --noEmit",
 		"test": "jest",
 		"eval": "ts-node src/eval/run.ts",
+		"probe": "ts-node src/probes/differential.ts",
 		"dev": "echo \"🫣 Wrong folder?: 'npm run dev' should be run in ./client directory\" && echo \"💡 Try: 'cd client && npm run dev'\" && exit 1"
 	},
 	"jest": {
@@ -20,6 +21,7 @@
 	},
 	"dependencies": {
 		"cors": "^2.8.5",
+		"dotenv": "^17.4.2",
 		"express": "^4.18.2"
 	},
 	"devDependencies": {

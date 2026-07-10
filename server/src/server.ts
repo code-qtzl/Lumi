@@ -6,6 +6,7 @@
  * additive. Training-sim routes are namespaced under /api/*.
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { sessionsRouter } from './routes/sessions';

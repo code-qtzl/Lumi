@@ -1,11 +1,18 @@
 /**
  * Fixture traveler — produces canned replies from the scenario card.
  *
- * Used for dev, testing, and demo fallback (F7 in PRD).
- * Replace with a real LLM-driven traveler for production.
+ * Used for dev, testing, and demo fallback (F7 in PRD), and as the safe
+ * per-turn fallback when the LLM traveler errors.
  */
 
 import { ScenarioCard, Turn } from '../contracts';
+import { TravelerEngine } from './types';
+
+/** TravelerEngine wrapper — the engine consumes travelers only via this seam. */
+export const fixtureTraveler: TravelerEngine = {
+  name: 'fixture',
+  reply: async (card, turns) => [{ role: 'traveler', text: getTravelerReply(card, turns) }],
+};
 
 /**
  * Returns a fixture reply for the traveler given the current conversation context.
@@ -64,7 +71,7 @@ function getOpeningLine(card: ScenarioCard): string {
 
 function getOpenReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `Yeah, we're headed to visit family. My ${card.persona.traveling_with || 'mom'} is really looking forward to it. It's been a long day though.`;
+    return `Yeah, we're headed to visit family. ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with} — we're` : "I'm"} really looking forward to it. It's been a long day though.`;
   }
   // Trafficking — rehearsed, avoids detail
   return `Just visiting. ${card.persona.traveling_with ? 'We\'re going together.' : ''} Can you just check us in? I don't want to miss the flight.`;

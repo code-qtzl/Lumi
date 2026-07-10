@@ -12,7 +12,8 @@
 import { SessionState, CreateSessionResponse, SubmitTurnResponse, EndSessionResponse, SessionView } from './types';
 import { getSession, setSession } from './store';
 import { ScenarioCard, Turn, Transcript } from '../contracts';
-import { getTravelerReply } from '../traveler/fixture';
+import { getTraveler } from '../traveler';
+import { ReplyTurn } from '../traveler/types';
 import { trace } from '../tracing/tracer';
 
 const SOFT_CAP = 20;  // trainee turns before nudge
@@ -39,29 +40,41 @@ function countTraineeTurns(turns: Turn[]): number {
   return turns.filter(t => t.role === 'trainee').length;
 }
 
+/** Append traveler/companion replies to the turn list as numbered turns. */
+function appendReplies(turns: Turn[], replies: ReplyTurn[]): Turn[] {
+  const appended: Turn[] = [];
+  for (const reply of replies) {
+    const turn: Turn = {
+      turn_id: nextTurnId(turns),
+      role: reply.role,
+      text: reply.text,
+      timestamp: new Date().toISOString(),
+      audio_ref: null, // voice-out (F8) plugs in here: TTS per reply turn, store audio_ref
+    };
+    turns.push(turn);
+    appended.push(turn);
+  }
+  return appended;
+}
+
 /**
  * Create a new session from a scenario card.
- * Returns the session ID and the traveler's opening turn.
+ * Returns the session ID and the traveler's opening turn(s).
  */
-export function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice' = 'text'): CreateSessionResponse {
+export async function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice' = 'text'): Promise<CreateSessionResponse> {
   const sessionId = nextSessionId();
   const now = new Date().toISOString();
 
   // Traveler speaks first
-  const firstTurn: Turn = {
-    turn_id: 't001',
-    role: 'traveler',
-    text: getTravelerReply(scenarioCard, []),
-    timestamp: now,
-    audio_ref: null,
-  };
+  const turns: Turn[] = [];
+  const openingTurns = appendReplies(turns, await getTraveler().reply(scenarioCard, [], sessionId));
 
   const state: SessionState = {
     session_id: sessionId,
     scenario_id: scenarioCard.scenario_id,
     scenario_card: scenarioCard,
     status: 'active',
-    turns: [firstTurn],
+    turns,
     agent_context: {
       persona: scenarioCard.persona,
       role_play_instructions: scenarioCard.role_play_instructions,
@@ -87,7 +100,7 @@ export function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice'
     scenario_id: scenarioCard.scenario_id,
     mode,
     traveler_name: scenarioCard.persona.name,
-    first_turn: firstTurn,
+    opening_turns: openingTurns,
   };
 }
 
@@ -95,7 +108,7 @@ export function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice'
  * Submit a trainee turn and get the traveler's reply.
  * Enforces turn caps and session status.
  */
-export function submitTurn(sessionId: string, text: string): SubmitTurnResponse | { error: string } {
+export async function submitTurn(sessionId: string, text: string): Promise<SubmitTurnResponse | { error: string }> {
   const state = getSession(sessionId);
   if (!state) return { error: 'Session not found' };
   if (state.status === 'completed') return { error: 'Session already completed' };
@@ -133,21 +146,14 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
 
     return {
       turn: traineeTurn,
-      traveler_reply: null,
+      traveler_turns: [],
       session_status: 'awaiting_decision',
       nudge: 'decision_required',
     };
   }
 
-  // Get traveler reply
-  const travelerReply: Turn = {
-    turn_id: nextTurnId(state.turns),
-    role: 'traveler',
-    text: getTravelerReply(state.scenario_card, state.turns),
-    timestamp: new Date().toISOString(),
-    audio_ref: null,
-  };
-  state.turns.push(travelerReply);
+  // Get traveler (and possibly companion) replies
+  const travelerTurns = appendReplies(state.turns, await getTraveler().reply(state.scenario_card, state.turns, sessionId));
 
   // Check soft nudge — once nudged, the status stays 'nudged' until the decision
   let nudge: 'consider_deciding' | undefined;
@@ -168,7 +174,7 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
 
   return {
     turn: traineeTurn,
-    traveler_reply: travelerReply,
+    traveler_turns: travelerTurns,
     session_status: state.status,
     nudge,
   };

@@ -18,7 +18,7 @@ function errorStatus(error: string): number {
   return error === 'Session not found' ? 404 : 409;
 }
 
-sessionsRouter.post('/', (req, res) => {
+sessionsRouter.post('/', async (req, res) => {
   const { scenario_id, mode } = req.body;
 
   if (!scenario_id) {
@@ -30,18 +30,18 @@ sessionsRouter.post('/', (req, res) => {
     return res.status(404).json({ error: `Scenario '${scenario_id}' not found` });
   }
 
-  const session = createSession(card, mode || 'text');
+  const session = await createSession(card, mode || 'text');
   return res.status(201).json(session);
 });
 
-sessionsRouter.post('/:id/turn', (req, res) => {
+sessionsRouter.post('/:id/turn', async (req, res) => {
   const { text } = req.body;
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     return res.status(400).json({ error: 'text is required and must be non-empty' });
   }
 
-  const result = submitTurn(req.params.id, text);
+  const result = await submitTurn(req.params.id, text);
   if ('error' in result) {
     return res.status(errorStatus(result.error)).json(result);
   }

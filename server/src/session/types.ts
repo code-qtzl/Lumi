@@ -47,7 +47,8 @@ export interface CreateSessionResponse {
   scenario_id: string;
   mode: 'text' | 'voice';
   traveler_name: string;
-  first_turn: Turn;
+  /** Traveler speaks first; may include a companion turn per the card. */
+  opening_turns: Turn[];
 }
 
 export interface SubmitTurnRequest {
@@ -56,7 +57,8 @@ export interface SubmitTurnRequest {
 
 export interface SubmitTurnResponse {
   turn: Turn;
-  traveler_reply: Turn | null;
+  /** Traveler reply plus, when the card has one, a companion interjection. Empty when the hard cap fires. */
+  traveler_turns: Turn[];
   session_status: SessionStatus;
   nudge?: 'consider_deciding' | 'decision_required';
 }
