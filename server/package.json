@@ -5,6 +5,7 @@
 		"server": "ts-node src/server.ts",
 		"typecheck": "tsc --noEmit",
 		"test": "jest",
+		"eval": "ts-node src/eval/run.ts",
 		"dev": "echo \"🫣 Wrong folder?: 'npm run dev' should be run in ./client directory\" && echo \"💡 Try: 'cd client && npm run dev'\" && exit 1"
 	},
 	"jest": {

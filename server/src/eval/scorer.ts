@@ -28,6 +28,15 @@ export function scoreSession(transcript: Transcript, card: ScenarioCard, rubric:
     scoreReferralProtocol(transcript, card),
   ];
 
+  // Decision-based claims anchor to the last trainee turn — the moment the
+  // trainee committed (F4: every claim names a transcript moment).
+  const decisionAnchor = traineeTurns.length > 0 ? [traineeTurns[traineeTurns.length - 1].turn_id] : [];
+  for (const dim of dimensions) {
+    if (dim.anchors.length === 0 && dim.score !== 3) {
+      dim.anchors = decisionAnchor;
+    }
+  }
+
   const decisionOutcome: DecisionOutcome = {
     trainee_decision: transcript.decision.value,
     ground_truth_type: card.ground_truth.type,
@@ -46,12 +55,18 @@ export function scoreSession(transcript: Transcript, card: ScenarioCard, rubric:
     summary: generateSummary(dimensions, decisionOutcome),
   };
 
-  // Anchor-validity check: regenerate if any anchors are invalid
+  // Anchor-validity gate (AC1): anchors are derived from transcript turn_ids by
+  // construction, so an invalid anchor means a scorer bug. Repair by dropping the
+  // bad ids and re-anchoring to the decision moment — never emit an unanchored
+  // low-score claim, and never show an invalid anchor.
   const validity = checkAnchorValidity(report, transcript);
   if (!validity.valid) {
-    // Remove invalid anchors and regenerate
+    console.warn(`[scorer] anchor repair for ${transcript.session_id}:`, validity.issues.map(i => i.message).join('; '));
     for (const dim of report.dimensions) {
       dim.anchors = dim.anchors.filter(a => transcript.turns.some(t => t.turn_id === a));
+      if (dim.anchors.length === 0 && dim.score !== 3) {
+        dim.anchors = decisionAnchor;
+      }
     }
   }
 
