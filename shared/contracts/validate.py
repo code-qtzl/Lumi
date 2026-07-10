@@ -58,6 +58,21 @@ bad = set(sc["ground_truth"]["indicators_present"]) - indicator_ids
 if bad:
     errors.append(f"scenario uses unknown indicator ids: {bad}")
 
+# Every scenario-card*.json in examples/ must be schema-valid with known indicators
+scenario_schema = load("scenario-card.schema.json")
+card_paths = sorted((HERE / "examples").glob("scenario-card*.json"))
+for card_path in card_paths:
+    rel = card_path.relative_to(HERE)
+    card = json.load(open(card_path))
+    try:
+        jsonschema.validate(card, scenario_schema)
+    except jsonschema.ValidationError as e:
+        errors.append(f"{rel}: schema violation: {e.message}")
+        continue
+    bad = set(card["ground_truth"]["indicators_present"]) - indicator_ids
+    if bad:
+        errors.append(f"{rel}: unknown indicator ids: {bad}")
+
 # Session/scenario linkage
 if tr["scenario_id"] != sc["scenario_id"]:
     errors.append("transcript.scenario_id does not match scenario card")
@@ -67,4 +82,4 @@ if rep["session_id"] != tr["session_id"] or rep["scenario_id"] != tr["scenario_i
 if errors:
     print("\n".join(f"FAIL: {e}" for e in errors))
     sys.exit(1)
-print(f"OK: {len(INSTANCES)} instances valid; cross-references consistent")
+print(f"OK: {len(INSTANCES)} instances valid; {len(card_paths)} scenario card(s) valid; cross-references consistent")

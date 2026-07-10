@@ -15,18 +15,29 @@ const loadedCards = new Map<string, ScenarioCard>();
 
 /**
  * Load all example scenario cards from the shared contracts directory.
+ * Any file named scenario-card*.json is treated as a card.
  */
 export function loadScenarioCards(): Map<string, ScenarioCard> {
   if (loadedCards.size > 0) return loadedCards;
 
-  const examplesPath = path.join(SCENARIO_DIR, 'scenario-card.example.json');
+  let files: string[] = [];
   try {
-    const raw = fs.readFileSync(examplesPath, 'utf-8');
-    const card = JSON.parse(raw) as ScenarioCard;
-    loadedCards.set(card.scenario_id, card);
-    console.log(`[scenarios] Loaded: ${card.scenario_id} — ${card.title}`);
+    files = fs.readdirSync(SCENARIO_DIR).filter(f => f.startsWith('scenario-card') && f.endsWith('.json'));
   } catch (err) {
-    console.warn(`[scenarios] Could not load ${examplesPath}:`, err);
+    console.warn(`[scenarios] Could not read ${SCENARIO_DIR}:`, err);
+    return loadedCards;
+  }
+
+  for (const file of files) {
+    const cardPath = path.join(SCENARIO_DIR, file);
+    try {
+      const raw = fs.readFileSync(cardPath, 'utf-8');
+      const card = JSON.parse(raw) as ScenarioCard;
+      loadedCards.set(card.scenario_id, card);
+      console.log(`[scenarios] Loaded: ${card.scenario_id} — ${card.title}`);
+    } catch (err) {
+      console.warn(`[scenarios] Could not load ${cardPath}:`, err);
+    }
   }
 
   return loadedCards;

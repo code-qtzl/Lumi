@@ -1,0 +1,27 @@
+{
+	"scenario_id": "coached-companion",
+	"title": "Young woman with older companion, coached answers",
+	"difficulty": 2,
+	"persona": {
+		"name": "Elena",
+		"traveling_with": "an older acquaintance",
+		"backstory": "Elena (19) is being trafficked by an older man posing as her uncle. She has been coached to say she is visiting family and to defer to him. She does not know the address where she will be staying and her companion holds both passports."
+	},
+	"role_play_instructions": "Give rehearsed, word-for-word-consistent answers about 'visiting family'. Deflect to your companion when pressed on specifics ('He knows the address'). If the trainee is patient and open, let small inconsistencies and hesitations surface — pause before answering, contradict a detail. If the trainee is accusatory or rapid-fire, retreat fully into the script and give shorter answers. Never state what is actually happening.",
+	"emotional_presentation": {
+		"label": "coached",
+		"voice_direction": "Flat, rehearsed delivery on scripted answers — slightly too quick, no natural hesitation. Noticeable pauses and a quieter, tighter voice when asked anything off-script. Defers audibly when the companion is mentioned."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": ["scripted-story", "third-party-answers", "no-itinerary-knowledge", "documents-held-by-other"]
+	},
+	"reveal": {
+		"summary": "Elena was being trafficked. The man posing as her uncle coached her story, controls both passports, and she does not know her own destination address.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

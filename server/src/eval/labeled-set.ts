@@ -54,7 +54,7 @@ const traffickingCard: ScenarioCard = {
   },
   role_play_instructions: 'Give rehearsed answers. Deflect to your companion when pressed. Avoid eye contact (text: short answers).',
   emotional_presentation: { label: 'coached' },
-  ground_truth: { type: 'trafficking', indicators_present: ['coached-answers', 'companion-answers', 'itinerary-ignorance'] },
+  ground_truth: { type: 'trafficking', indicators_present: ['scripted-story', 'third-party-answers', 'no-itinerary-knowledge'] },
   reveal: {
     summary: 'Elena was being trafficked. She was coached to give a rehearsed story.',
     teaching_points: ['Coached answers and deference to a companion are strong behavioral clusters.', 'Separating the traveler from the companion is a key technique.'],
