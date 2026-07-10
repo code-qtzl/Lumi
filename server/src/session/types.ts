@@ -7,12 +7,19 @@
 
 import type { ScenarioCard, Transcript, Turn, Decision } from '../contracts';
 
+/**
+ * 'awaiting_decision' = hard cap reached: no more turns accepted, but the
+ * session is NOT over — it can only end via an explicit refer/no_action
+ * decision (U3/AC6: the decision gate).
+ */
+export type SessionStatus = 'active' | 'nudged' | 'awaiting_decision' | 'completed';
+
 /** Hidden runtime state — never exposed to the client. */
 export interface SessionState {
   session_id: string;
   scenario_id: string;
   scenario_card: ScenarioCard;
-  status: 'active' | 'nudged' | 'completed';
+  status: SessionStatus;
   turns: Turn[];
   /** Dehydrated scenario card data the role-play agent needs (no reveal). */
   agent_context: {
@@ -24,8 +31,10 @@ export interface SessionState {
   created_at: string;
   /** Soft cap reached — we've sent the "consider deciding" nudge. */
   nudged_at_turn: number | null;
-  /** Hard cap reached — session automatically ends after this turn. */
-  capped_at_turn: number;
+  /** Trainee-turn count at which the hard cap fired, or null if not reached. */
+  capped_at_turn: number | null;
+  /** Set once the session ends via a decision; the transcript of record. */
+  final_transcript: Transcript | null;
 }
 
 export interface CreateSessionRequest {
@@ -48,8 +57,16 @@ export interface SubmitTurnRequest {
 export interface SubmitTurnResponse {
   turn: Turn;
   traveler_reply: Turn | null;
-  session_status: 'active' | 'nudged' | 'completed';
-  nudge?: 'consider_deciding' | 'auto_ended';
+  session_status: SessionStatus;
+  nudge?: 'consider_deciding' | 'decision_required';
+}
+
+/** Mid-session view for rehydration — no decision, no ground truth. */
+export interface SessionView {
+  session_id: string;
+  scenario_id: string;
+  status: SessionStatus;
+  turns: Turn[];
 }
 
 export interface EndSessionRequest {

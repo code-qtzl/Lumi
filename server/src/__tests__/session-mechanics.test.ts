@@ -6,7 +6,7 @@
  * - Session state transitions
  */
 
-import { createSession, submitTurn, endSession, getTranscript } from '../session/engine';
+import { createSession, submitTurn, endSession, getTranscript, getSessionView } from '../session/engine';
 import { ScenarioCard } from '../contracts';
 
 // A minimal scenario card for testing
@@ -103,24 +103,45 @@ describe('Session Mechanics', () => {
   });
 
   describe('hard cap at 30 trainee turns', () => {
-    it('auto-ends the session at 30 trainee turns', () => {
+    function capSession() {
       const session = createSession(testCard, 'text');
-
-      // Submit 29 trainee turns (safe)
       for (let i = 0; i < 29; i++) {
         const result = submitTurn(session.session_id, `Question ${i + 1}`);
         expect('error' in result).toBe(false);
-        if ('error' in result) return;
-        expect(result.session_status).not.toBe('completed');
+        if ('error' in result) throw new Error(result.error);
+        expect(result.session_status).not.toBe('awaiting_decision');
       }
+      const capped = submitTurn(session.session_id, 'Question 30');
+      expect('error' in capped).toBe(false);
+      if ('error' in capped) throw new Error(capped.error);
+      return { session, capped };
+    }
 
-      // 30th trainee turn should auto-end
-      const result = submitTurn(session.session_id, 'Question 30');
+    it('locks interviewing at 30 trainee turns and requires a decision', () => {
+      const { capped } = capSession();
+      expect(capped.nudge).toBe('decision_required');
+      expect(capped.session_status).toBe('awaiting_decision');
+      expect(capped.traveler_reply).toBeNull();
+    });
+
+    it('rejects further turns after the cap', () => {
+      const { session } = capSession();
+      const result = submitTurn(session.session_id, 'Question 31');
+      expect('error' in result).toBe(true);
+      if ('error' in result) {
+        expect(result.error).toMatch(/decision/i);
+      }
+    });
+
+    it('still accepts a decision after the cap (decision gate survives the cap)', () => {
+      const { session } = capSession();
+      const result = endSession(session.session_id, 'refer', 'Behavioral cluster observed');
       expect('error' in result).toBe(false);
       if ('error' in result) return;
-      expect(result.nudge).toBe('auto_ended');
-      expect(result.session_status).toBe('completed');
-      expect(result.traveler_reply).toBeNull();
+      expect(result.ended).toBe(true);
+      expect(result.transcript.decision.value).toBe('refer');
+      // All 30 trainee turns are preserved in the transcript
+      expect(result.transcript.turns.filter(t => t.role === 'trainee').length).toBe(30);
     });
   });
 
@@ -160,13 +181,32 @@ describe('Session Mechanics', () => {
   });
 
   describe('getTranscript', () => {
-    it('returns a transcript for an active session', () => {
+    it('refuses a transcript for an active session (no fabricated decision)', () => {
       const session = createSession(testCard, 'text');
       submitTurn(session.session_id, 'Hello');
+      const result = getTranscript(session.session_id);
+      expect('error' in result).toBe(true);
+    });
+
+    it('returns the transcript of record after the session ends', () => {
+      const session = createSession(testCard, 'text');
+      submitTurn(session.session_id, 'Hello');
+      endSession(session.session_id, 'no_action');
       const result = getTranscript(session.session_id);
       expect('error' in result).toBe(false);
       if ('error' in result) return;
       expect(result.turns.length).toBeGreaterThanOrEqual(2);
+      expect(result.decision.value).toBe('no_action');
+    });
+
+    it('returns status and turns mid-session via getSessionView', () => {
+      const session = createSession(testCard, 'text');
+      submitTurn(session.session_id, 'Hello');
+      const view = getSessionView(session.session_id);
+      expect('error' in view).toBe(false);
+      if ('error' in view) return;
+      expect(view.status).toBe('active');
+      expect(view.turns.length).toBeGreaterThanOrEqual(2);
     });
 
     it('returns error for non-existent session', () => {

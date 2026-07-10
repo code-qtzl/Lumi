@@ -9,7 +9,7 @@
  * - Assemble schema-valid transcripts
  */
 
-import { SessionState, CreateSessionResponse, SubmitTurnResponse, EndSessionResponse } from './types';
+import { SessionState, CreateSessionResponse, SubmitTurnResponse, EndSessionResponse, SessionView } from './types';
 import { getSession, setSession } from './store';
 import { ScenarioCard, Turn, Transcript } from '../contracts';
 import { getTravelerReply } from '../traveler/fixture';
@@ -20,10 +20,14 @@ const HARD_CAP = 30;  // trainee turns before auto-end
 
 let sessionCounter = 0;
 
+// Per-process suffix: the counter resets on restart while trace files are
+// per-day, so date+counter alone collides across restarts.
+const processSuffix = Math.random().toString(36).slice(2, 6);
+
 function nextSessionId(): string {
   sessionCounter++;
   const date = new Date().toISOString().slice(0, 10);
-  return `sess-${date}-${String(sessionCounter).padStart(4, '0')}`;
+  return `sess-${date}-${processSuffix}-${String(sessionCounter).padStart(4, '0')}`;
 }
 
 function nextTurnId(turns: Turn[]): string {
@@ -66,7 +70,8 @@ export function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice'
     },
     created_at: now,
     nudged_at_turn: null,
-    capped_at_turn: HARD_CAP,
+    capped_at_turn: null,
+    final_transcript: null,
   };
 
   setSession(sessionId, state);
@@ -94,6 +99,9 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
   const state = getSession(sessionId);
   if (!state) return { error: 'Session not found' };
   if (state.status === 'completed') return { error: 'Session already completed' };
+  if (state.status === 'awaiting_decision') {
+    return { error: 'Turn cap reached — the session can only end with a refer/no_action decision' };
+  }
 
   const now = new Date().toISOString();
   const traineeTurnId = nextTurnId(state.turns);
@@ -110,9 +118,10 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
 
   const traineeTurnCount = countTraineeTurns(state.turns);
 
-  // Check hard cap
+  // Hard cap: no further interviewing, but the decision gate still applies —
+  // the session stays open until the trainee commits refer/no_action (AC6).
   if (traineeTurnCount >= HARD_CAP) {
-    state.status = 'completed';
+    state.status = 'awaiting_decision';
     state.capped_at_turn = traineeTurnCount;
     setSession(sessionId, state);
 
@@ -125,8 +134,8 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
     return {
       turn: traineeTurn,
       traveler_reply: null,
-      session_status: 'completed',
-      nudge: 'auto_ended',
+      session_status: 'awaiting_decision',
+      nudge: 'decision_required',
     };
   }
 
@@ -140,14 +149,14 @@ export function submitTurn(sessionId: string, text: string): SubmitTurnResponse 
   };
   state.turns.push(travelerReply);
 
-  // Check soft nudge
+  // Check soft nudge — once nudged, the status stays 'nudged' until the decision
   let nudge: 'consider_deciding' | undefined;
   if (traineeTurnCount >= SOFT_CAP && state.nudged_at_turn === null) {
     state.nudged_at_turn = traineeTurnCount;
     nudge = 'consider_deciding';
   }
 
-  state.status = nudge ? 'nudged' : 'active';
+  if (nudge) state.status = 'nudged';
   setSession(sessionId, state);
 
   trace('session.turn', {
@@ -174,9 +183,6 @@ export function endSession(sessionId: string, decision: 'refer' | 'no_action', s
   if (!state) return { error: 'Session not found' };
   if (state.status === 'completed') return { error: 'Session already completed' };
 
-  state.status = 'completed';
-  setSession(sessionId, state);
-
   const now = new Date().toISOString();
 
   const transcript: Transcript = {
@@ -192,6 +198,10 @@ export function endSession(sessionId: string, decision: 'refer' | 'no_action', s
     },
   };
 
+  state.status = 'completed';
+  state.final_transcript = transcript;
+  setSession(sessionId, state);
+
   trace('session.ended', {
     session_id: sessionId,
     decision,
@@ -206,19 +216,30 @@ export function endSession(sessionId: string, decision: 'refer' | 'no_action', s
 }
 
 /**
- * Get the current transcript for a session (for debrief).
+ * Get the transcript of record for an ended session (for debrief).
+ * A transcript only exists once the decision gate has been passed —
+ * we never fabricate a decision for an in-progress session.
  */
 export function getTranscript(sessionId: string): Transcript | { error: string } {
+  const state = getSession(sessionId);
+  if (!state) return { error: 'Session not found' };
+  if (!state.final_transcript) return { error: 'Session not ended — no transcript until a decision is committed' };
+
+  return state.final_transcript;
+}
+
+/**
+ * Get the mid-session view (status + turns) for client rehydration.
+ * Contains no decision and no ground truth.
+ */
+export function getSessionView(sessionId: string): SessionView | { error: string } {
   const state = getSession(sessionId);
   if (!state) return { error: 'Session not found' };
 
   return {
     session_id: sessionId,
     scenario_id: state.scenario_id,
-    mode: 'text',
-    started_at: state.created_at,
-    ended_at: new Date().toISOString(),
+    status: state.status,
     turns: state.turns,
-    decision: { value: 'no_action' }, // placeholder until ended
   };
 }
