@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
+		"build": "tsc -b && vite build",
 		"lint": "eslint .",
 		"server": "echo \"🫣 Wrong folder?: 'npm run server' should be run in ./server directory\" && echo \"💡 Try: 'cd server && npm run server'\" && exit 1"
 	},

@@ -1,4 +1,11 @@
 **/node_modules
 
 /.claude
-/.github
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Staging area for proposed .claude config (delete after moving into .claude/)
+/claude-settings-proposed
