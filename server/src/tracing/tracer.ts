@@ -13,6 +13,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 const TRACE_DIR = '.traces';
 const TRACE_FILE = path.join(TRACE_DIR, `trace-${new Date().toISOString().slice(0, 10)}.jsonl`);
@@ -32,18 +33,16 @@ export interface TraceEntry {
   data: Record<string, unknown>;
 }
 
-let gitHash: string = 'unknown';
-
-// Lazy-init: read git hash on first trace
-function initGitHash(): void {
-  if (gitHash !== 'unknown') return;
+// Prompt version = git commit at process start; placeholder outside a git repo.
+const gitHash: string = (() => {
   try {
-    gitHash = fs.readFileSync(path.join(__dirname, '..', '..', '.git', 'HEAD'), 'utf-8').trim().slice(0, 7);
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
   } catch {
-    // Not a git repo or no access — use placeholder
-    gitHash = 'fixture-dev';
+    return 'fixture-dev';
   }
-}
+})();
 
 /**
  * Record a trace entry.
