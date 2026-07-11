@@ -1,92 +1,293 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
+import Dashboard from './components/Dashboard';
+import ConversationPanel from './components/ConversationPanel';
+import RiskCard from './components/RiskCard';
+import SessionInit from './components/SessionInit';
+import type {
+	InterviewSession,
+	RiskLevel,
+	Speaker,
+	ToneSignalSummary,
+	VoiceAnalysisResult,
+} from './types';
 
-interface Message {
-	id: number;
-	name: string;
-	message: string;
-	timestamp: string;
+interface MessageSubmission {
+	content: string;
+	speaker: Speaker;
+	source: 'text' | 'voice';
+	toneSignals?: ToneSignalSummary;
+}
+
+interface VoiceAnalyzeRequest {
+	blob: Blob;
+	speaker: Speaker;
+	isBaselineCapture: boolean;
+	reasonTag?: string;
 }
 
 function App() {
-	const [messages, setMessages] = useState<Message[]>([]); // State to hold messages
-	const [name, setName] = useState(''); // State for the name input
-	const [message, setMessage] = useState(''); // State for the message input
+	const [session, setSession] = useState<InterviewSession | null>(null);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string>('');
 
-	useEffect(() => {
-		fetchMessages(); // Fetch messages when the component mounts
-	}, []);
+	const API_BASE =
+		import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-	const fetchMessages = async () => {
-		try {
-			const response = await fetch('http://localhost:3000/messages');
-			const data = await response.json();
-			setMessages(data);
-		} catch (error) {
-			console.error('Error fetching messages:', error);
-		}
-	};
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault(); // Prevent form submission from reloading the page
-		if (!name.trim() || !message.trim()) return;
+	const handleStartSession = async (officerName: string) => {
+		setLoading(true);
+		setError('');
 
 		try {
-			const response = await fetch('http://localhost:3000/messages', {
+			const response = await fetch(`${API_BASE}/sessions`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, message }),
+				body: JSON.stringify({ officerName }),
 			});
 
-			if (response.ok) {
-				setName('');
-				setMessage('');
-				fetchMessages();
-			}
-		} catch (error) {
-			console.error('Error posting message:', error);
+			if (!response.ok) throw new Error('Failed to create session');
+
+			const newSession = await response.json();
+			setSession(newSession);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Unknown error');
+		} finally {
+			setLoading(false);
 		}
 	};
 
-	return (
-		<div className='App'>
-			<h1>Beacon App</h1>
-			<div className='messages'>
-				{messages.length === 0 ? (
-					<p className='no-messages'>No messages yet.</p>
-				) : (
-					messages
-						.slice()
-						.reverse()
-						.map((msg) => (
-							<div key={msg.id} className='message'>
-								<strong>{msg.name}</strong>
-								<p>{msg.message}</p>
-								<small>
-									{new Date(msg.timestamp).toLocaleString()}
-								</small>
-							</div>
-						))
-				)}
-			</div>
+	const handleSendMessage = async ({
+		content,
+		speaker,
+		source,
+		toneSignals,
+	}: MessageSubmission) => {
+		if (!session) return;
 
-			<div className='post-section'>
-				<h2>Post a Message</h2>
-				<form onSubmit={handleSubmit}>
-					<input
-						type='text'
-						placeholder='Your name'
-						value={name}
-						onChange={(e) => setName(e.target.value)}
+		try {
+			const response = await fetch(
+				`${API_BASE}/sessions/${session.id}/messages`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						content,
+						speaker,
+						source,
+						toneSignals,
+					}),
+				},
+			);
+
+			if (!response.ok) throw new Error('Failed to send message');
+
+			const result = await response.json();
+
+			// Update session with new messages and risk data
+			setSession((prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					messages: prev.messages.concat([
+						result.message,
+						result.assistantMessage,
+					]),
+					currentRiskLevel: result.sessionUpdated.currentRiskLevel,
+					currentDisplayRiskLevel:
+						result.sessionUpdated.currentDisplayRiskLevel,
+					allIndicators: result.sessionUpdated.allIndicators,
+					toneState: result.sessionUpdated.toneState ?? prev.toneState,
+				};
+			});
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : 'Failed to send message',
+			);
+		}
+	};
+
+	const handleAnalyzeVoice = async ({
+		blob,
+		speaker,
+		isBaselineCapture,
+		reasonTag,
+	}: VoiceAnalyzeRequest): Promise<VoiceAnalysisResult> => {
+		if (!session) {
+			throw new Error('No active session');
+		}
+
+		const formData = new FormData();
+		formData.append('audio', blob, 'utterance.webm');
+		formData.append('speaker', speaker);
+		formData.append('isBaselineCapture', String(isBaselineCapture));
+		if (reasonTag) {
+			formData.append('reasonTag', reasonTag);
+		}
+
+		const response = await fetch(
+			`${API_BASE}/sessions/${session.id}/voice/analyze`,
+			{
+				method: 'POST',
+				body: formData,
+			},
+		);
+
+		const result = await response.json();
+
+		if (!response.ok) {
+			throw new Error(result.error || 'Voice analysis failed');
+		}
+
+		setSession((prev) => {
+			if (!prev) {
+				return prev;
+			}
+
+			return {
+				...prev,
+				toneState: {
+					...prev.toneState,
+					baseline: result.baselineCaptured
+						? {
+								...result.baseline,
+								capturedAt: new Date(
+									result.baseline?.capturedAt ?? Date.now(),
+								),
+							}
+						: prev.toneState.baseline,
+				},
+			};
+		});
+
+		return result;
+	};
+
+	const handleOverrideRisk = async (
+		messageId: string,
+		nextLevel: RiskLevel,
+		justification: string,
+		supervisorAcknowledged: boolean,
+	) => {
+		if (!session) {
+			return;
+		}
+
+		try {
+			const response = await fetch(
+				`${API_BASE}/sessions/${session.id}/risk-override`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						messageId,
+						nextLevel,
+						justification,
+						supervisorAcknowledged,
+					}),
+				},
+			);
+
+			const result = await response.json();
+			if (!response.ok) {
+				throw new Error(result.error || 'Failed to override risk');
+			}
+
+			setSession((prev) => {
+				if (!prev) {
+					return prev;
+				}
+
+				return {
+					...prev,
+					messages: prev.messages.map((message) =>
+						message.id === result.message.id
+							? result.message
+							: message,
+					),
+					currentRiskLevel: result.currentRiskLevel,
+					currentDisplayRiskLevel: result.currentDisplayRiskLevel,
+					riskOverrideAudit: result.riskOverrideAudit,
+				};
+			});
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : 'Failed to override risk',
+			);
+		}
+	};
+
+	const handleUpdateNotes = async (notes: string) => {
+		if (!session) return;
+
+		try {
+			const response = await fetch(`${API_BASE}/sessions/${session.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ notes }),
+			});
+
+			if (!response.ok) throw new Error('Failed to update notes');
+
+			const updated = await response.json();
+			setSession(updated);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : 'Failed to update notes',
+			);
+		}
+	};
+
+	if (!session) {
+		return (
+			<SessionInit
+				onStart={handleStartSession}
+				loading={loading}
+				error={error}
+			/>
+		);
+	}
+
+	return (
+		<div className='app'>
+			<header className='app-header'>
+				<h1>Beacon Interview Assistant</h1>
+				<p className='subtitle'>Trauma-Informed Risk Scoring Tool</p>
+			</header>
+
+			{error && <div className='error-banner'>{error}</div>}
+
+			<main className='app-main'>
+				<aside className='app-sidebar'>
+					<Dashboard
+						session={session}
+						onUpdateNotes={handleUpdateNotes}
 					/>
-					<textarea
-						placeholder='Your message'
-						value={message}
-						onChange={(e) => setMessage(e.target.value)}
+				</aside>
+
+				<section className='app-content'>
+					<ConversationPanel
+						session={session}
+						messages={session.messages}
+						onSendMessage={handleSendMessage}
+						onAnalyzeVoice={handleAnalyzeVoice}
+						onOverrideRisk={handleOverrideRisk}
 					/>
-					<button type='submit'>Post Message</button>
-				</form>
-			</div>
+				</section>
+
+				<aside className='app-risk-panel'>
+					<RiskCard
+						riskLevel={session.currentRiskLevel}
+						displayRiskLevel={session.currentDisplayRiskLevel}
+						indicators={session.allIndicators}
+						confidence={
+							session.messages.find((m) => m.riskAssessment)
+								?.riskAssessment?.confidence || 50
+						}
+						toneState={session.toneState}
+						riskOverrideAudit={session.riskOverrideAudit}
+					/>
+				</aside>
+			</main>
 		</div>
 	);
 }

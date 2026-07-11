@@ -1,6 +1,9 @@
 services:
     server:
         build: ./server
+        env_file:
+            - path: ./server/.env
+              required: false
         ports:
             - '3000:3000'
         volumes:

@@ -1,0 +1,108 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dashboard-card {
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+}
+
+.dashboard-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-card h2 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-4) 0;
+  color: var(--color-accent);
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--text-sm);
+}
+
+.status-item:last-child {
+  border-bottom: none;
+}
+
+.status-item .label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.status-item .value {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.notes-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  resize: vertical;
+  margin: var(--space-3) 0;
+  transition: border-color var(--transition-base);
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+.guidance-content {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.guidance-content p {
+  font-weight: 600;
+  margin: 0 0 var(--space-3) 0;
+  color: var(--color-text);
+}
+
+.guidance-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.guidance-content li {
+  padding: var(--space-2) 0;
+  padding-left: var(--space-5);
+  position: relative;
+}
+
+.guidance-content li:before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: var(--space-4);
+  }
+
+  .dashboard-card h2 {
+    font-size: var(--text-lg);
+  }
+}
