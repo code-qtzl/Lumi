@@ -1,15 +1,18 @@
 /**
  * Session routes — the trainee-facing session runtime API.
  *
- *   POST /api/sessions           — create a new session
- *   POST /api/sessions/:id/turn  — submit a trainee turn
- *   POST /api/sessions/:id/end   — end session with decision (the only way out)
- *   GET  /api/sessions/:id       — transcript when ended, session view while active
+ *   POST /api/sessions            — create a new session
+ *   POST /api/sessions/:id/turn   — submit a trainee turn
+ *   POST /api/sessions/:id/end    — end session with decision (the only way out)
+ *   GET  /api/sessions/:id        — transcript when ended, session view while active
+ *   GET  /api/sessions/:id/feedback — rubric-scored feedback report (debrief); ended sessions only
  */
 
 import { Router } from 'express';
 import { createSession, submitTurn, endSession, getTranscript, getSessionView } from '../session/engine';
 import { getScenarioCard } from '../scenarios/registry';
+import { scoreSession } from '../eval/scorer';
+import { loadRubric } from '../eval/rubric-loader';
 
 export const sessionsRouter = Router();
 
@@ -78,4 +81,19 @@ sessionsRouter.get('/:id', (req, res) => {
   }
 
   return res.json({ session: view });
+});
+
+sessionsRouter.get('/:id/feedback', (req, res) => {
+  const transcript = getTranscript(req.params.id);
+  if ('error' in transcript) {
+    return res.status(errorStatus(transcript.error)).json(transcript);
+  }
+
+  const card = getScenarioCard(transcript.scenario_id);
+  if (!card) {
+    return res.status(404).json({ error: `Scenario '${transcript.scenario_id}' not found` });
+  }
+
+  const report = scoreSession(transcript, card, loadRubric());
+  return res.json({ report, reveal: card.reveal });
 });

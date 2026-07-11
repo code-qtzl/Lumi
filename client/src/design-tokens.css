@@ -30,8 +30,8 @@
 	--color-info-light: #e4f2f7;
 
 	/* --- FONTS --- */
-	--font-display: 'Bricolage Grotesque', Georgia, serif;
-	--font-body: 'DM Sans', -apple-system, sans-serif;
+	--font-display: 'Inter', -apple-system, sans-serif;
+	--font-body: 'IBM Plex Sans', -apple-system, sans-serif;
 	--font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 
 	/* --- TYPE SCALE (1.25 ratio) --- */
@@ -85,7 +85,7 @@
 	--transition-slow: 300ms ease-in-out;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 * {
 	box-sizing: border-box;
