@@ -26,13 +26,13 @@ beforeEach(__resetForTesting);
 
 describe('GET /scenarios', () => {
 	it('returns 200 with the seeded list', async () => {
-		const res = await request(app).get('/scenarios');
+		const res = await request(app).get('/api/scenarios');
 		expect(res.status).toBe(200);
 		expect(res.body).toHaveLength(1);
 	});
 
 	it('list items only contain scenario_id, title, and difficulty', async () => {
-		const res = await request(app).get('/scenarios');
+		const res = await request(app).get('/api/scenarios');
 		const item = res.body[0];
 		expect(item).toMatchObject({ scenario_id: SEED_ID, title: expect.any(String), difficulty: 1 });
 		// must NOT leak sensitive fields
@@ -47,27 +47,27 @@ describe('GET /scenarios', () => {
 
 describe('GET /scenarios/:id', () => {
 	it('returns 200 with the trainee-safe view', async () => {
-		const res = await request(app).get(`/scenarios/${SEED_ID}`);
+		const res = await request(app).get(`/api/scenarios/${SEED_ID}`);
 		expect(res.status).toBe(200);
 		expect(res.body.scenario_id).toBe(SEED_ID);
 	});
 
 	it('omits ground_truth, reveal, and role_play_instructions', async () => {
-		const res = await request(app).get(`/scenarios/${SEED_ID}`);
+		const res = await request(app).get(`/api/scenarios/${SEED_ID}`);
 		expect(res.body).not.toHaveProperty('ground_truth');
 		expect(res.body).not.toHaveProperty('reveal');
 		expect(res.body).not.toHaveProperty('role_play_instructions');
 	});
 
 	it('omits persona.backstory', async () => {
-		const res = await request(app).get(`/scenarios/${SEED_ID}`);
+		const res = await request(app).get(`/api/scenarios/${SEED_ID}`);
 		expect(res.body.persona).not.toHaveProperty('backstory');
 		expect(res.body.persona).toHaveProperty('name');
 		expect(res.body.persona).toHaveProperty('traveling_with');
 	});
 
 	it('returns 404 for an unknown id', async () => {
-		const res = await request(app).get('/scenarios/does-not-exist');
+		const res = await request(app).get('/api/scenarios/does-not-exist');
 		expect(res.status).toBe(404);
 		expect(res.body).toHaveProperty('error');
 	});
@@ -77,7 +77,7 @@ describe('GET /scenarios/:id', () => {
 
 describe('GET /scenarios/:id/reveal', () => {
 	it('returns 200 with the full scenario card', async () => {
-		const res = await request(app).get(`/scenarios/${SEED_ID}/reveal`);
+		const res = await request(app).get(`/api/scenarios/${SEED_ID}/reveal`);
 		expect(res.status).toBe(200);
 		expect(res.body).toHaveProperty('ground_truth');
 		expect(res.body).toHaveProperty('reveal');
@@ -86,7 +86,7 @@ describe('GET /scenarios/:id/reveal', () => {
 	});
 
 	it('returns 404 for an unknown id', async () => {
-		const res = await request(app).get('/scenarios/does-not-exist/reveal');
+		const res = await request(app).get('/api/scenarios/does-not-exist/reveal');
 		expect(res.status).toBe(404);
 		expect(res.body).toHaveProperty('error');
 	});
@@ -96,7 +96,7 @@ describe('GET /scenarios/:id/reveal', () => {
 
 describe('POST /scenarios', () => {
 	it('returns 201 and the trainee-safe view on success', async () => {
-		const res = await request(app).post('/scenarios').send(VALID_NEW_SCENARIO);
+		const res = await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
 		expect(res.status).toBe(201);
 		expect(res.body.scenario_id).toBe('new-scenario');
 		// response must NOT leak sensitive fields
@@ -107,15 +107,15 @@ describe('POST /scenarios', () => {
 	});
 
 	it('persists the scenario so it appears in GET /scenarios', async () => {
-		await request(app).post('/scenarios').send(VALID_NEW_SCENARIO);
-		const res = await request(app).get('/scenarios');
+		await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
+		const res = await request(app).get('/api/scenarios');
 		expect(res.body).toHaveLength(2);
 		expect(res.body.map((s: { scenario_id: string }) => s.scenario_id)).toContain('new-scenario');
 	});
 
 	it('returns 400 with field-level details when scenario_id is invalid', async () => {
 		const res = await request(app)
-			.post('/scenarios')
+			.post('/api/scenarios')
 			.send({ ...VALID_NEW_SCENARIO, scenario_id: 'Invalid ID with spaces' });
 		expect(res.status).toBe(400);
 		expect(res.body.error).toBe('Validation failed');
@@ -124,14 +124,14 @@ describe('POST /scenarios', () => {
 	});
 
 	it('returns 400 when required fields are missing', async () => {
-		const res = await request(app).post('/scenarios').send({ scenario_id: 'valid-id' });
+		const res = await request(app).post('/api/scenarios').send({ scenario_id: 'valid-id' });
 		expect(res.status).toBe(400);
 		expect(res.body.details.length).toBeGreaterThan(0);
 	});
 
 	it('returns 400 when difficulty is out of range', async () => {
 		const res = await request(app)
-			.post('/scenarios')
+			.post('/api/scenarios')
 			.send({ ...VALID_NEW_SCENARIO, difficulty: 5 });
 		expect(res.status).toBe(400);
 		const fields = res.body.details.map((d: { field: string }) => d.field);
@@ -140,7 +140,7 @@ describe('POST /scenarios', () => {
 
 	it('returns 400 when ground_truth.type is not a valid enum value', async () => {
 		const res = await request(app)
-			.post('/scenarios')
+			.post('/api/scenarios')
 			.send({ ...VALID_NEW_SCENARIO, ground_truth: { type: 'unknown', indicators_present: [] } });
 		expect(res.status).toBe(400);
 		const fields = res.body.details.map((d: { field: string }) => d.field);
@@ -149,7 +149,7 @@ describe('POST /scenarios', () => {
 
 	it('returns 409 when scenario_id already exists', async () => {
 		const res = await request(app)
-			.post('/scenarios')
+			.post('/api/scenarios')
 			.send({ ...VALID_NEW_SCENARIO, scenario_id: SEED_ID });
 		expect(res.status).toBe(409);
 		expect(res.body).toHaveProperty('error');
@@ -160,21 +160,21 @@ describe('POST /scenarios', () => {
 
 describe('DELETE /scenarios/:id', () => {
 	it('returns 204 and removes the scenario', async () => {
-		const del = await request(app).delete(`/scenarios/${SEED_ID}`);
+		const del = await request(app).delete(`/api/scenarios/${SEED_ID}`);
 		expect(del.status).toBe(204);
 
-		const get = await request(app).get(`/scenarios/${SEED_ID}`);
+		const get = await request(app).get(`/api/scenarios/${SEED_ID}`);
 		expect(get.status).toBe(404);
 	});
 
 	it('removes the scenario from the list', async () => {
-		await request(app).delete(`/scenarios/${SEED_ID}`);
-		const res = await request(app).get('/scenarios');
+		await request(app).delete(`/api/scenarios/${SEED_ID}`);
+		const res = await request(app).get('/api/scenarios');
 		expect(res.body).toHaveLength(0);
 	});
 
 	it('returns 404 for an unknown id', async () => {
-		const res = await request(app).delete('/scenarios/does-not-exist');
+		const res = await request(app).delete('/api/scenarios/does-not-exist');
 		expect(res.status).toBe(404);
 		expect(res.body).toHaveProperty('error');
 	});

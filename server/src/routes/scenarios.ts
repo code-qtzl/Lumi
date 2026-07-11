@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-// â”€â”€ Zod schemas (mirror scenario-card.schema.json) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// GöÇGöÇ Zod schemas (mirror scenario-card.schema.json) GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
 
 const PersonaSchema = z.object({
 	name: z.string().min(1),
@@ -39,7 +39,7 @@ const ScenarioCardSchema = z.object({
 
 type ScenarioCard = z.infer<typeof ScenarioCardSchema>;
 
-// â”€â”€ Trainee-safe view (no ground_truth / reveal / backstory / role_play_instructions) â”€
+// GöÇGöÇ Trainee-safe view (no ground_truth / reveal / backstory / role_play_instructions) GöÇ
 
 type ScenarioListItem = Pick<ScenarioCard, 'scenario_id' | 'title' | 'difficulty'>;
 
@@ -62,7 +62,7 @@ function toPublicView(s: ScenarioCard): ScenarioPublicView {
 	return { ...rest, persona: personaPublic };
 }
 
-// â”€â”€ In-memory store (seeded with the example scenario) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// GöÇGöÇ In-memory store (seeded with the example scenario) GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
 
 const SEED: ScenarioCard[] = [
 	{
@@ -76,7 +76,7 @@ const SEED: ScenarioCard[] = [
 				"Maya (16) is flying with her father to visit her grandmother. Their connection was delayed; both are tired and irritable. Maya is glued to her phone and gives short answers because she is a tired teenager, not because anything is wrong.",
 		},
 		role_play_instructions:
-			"Give short, mildly annoyed answers. Warm up noticeably if the trainee is patient and asks open questions ('We're going to see my grandma, she's making pierogi'). If the trainee is accusatory or separates you from your father aggressively, become anxious and shut down â€” an innocent teen under pressure looks 'suspicious' too.",
+			"Give short, mildly annoyed answers. Warm up noticeably if the trainee is patient and asks open questions ('We're going to see my grandma, she's making pierogi'). If the trainee is accusatory or separates you from your father aggressively, become anxious and shut down GÇö an innocent teen under pressure looks 'suspicious' too.",
 		emotional_presentation: {
 			label: 'ordinary-nervous',
 			voice_direction:
@@ -90,9 +90,9 @@ const SEED: ScenarioCard[] = [
 			summary:
 				'Nothing was wrong. Maya is a tired 16-year-old traveling with her father. Short answers and phone-avoidance were ordinary teenage behavior, not indicators.',
 			teaching_points: [
-				'Terse answers and eye-contact avoidance are weak signals on their own â€” look for behavioral clusters (document control, third-party answering, itinerary ignorance).',
+				'Terse answers and eye-contact avoidance are weak signals on their own GÇö look for behavioral clusters (document control, third-party answering, itinerary ignorance).',
 				'Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.',
-				'The correct outcome is no referral â€” escalating here would burden an innocent family.',
+				'The correct outcome is no referral GÇö escalating here would burden an innocent family.',
 			],
 		},
 	},
@@ -106,14 +106,14 @@ export function __resetForTesting(): void {
 	for (const s of SEED) store.set(s.scenario_id, s);
 }
 
-// â”€â”€ Router â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// GöÇGöÇ Router GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
 
 const router = Router();
 
 /**
  * GET /scenarios
  * Returns a list of all scenarios (id, title, difficulty only).
- * Safe to send to the trainee â€” no ground truth or reveal data.
+ * Safe to send to the trainee GÇö no ground truth or reveal data.
  */
 router.get('/', (_req, res) => {
 	const list: ScenarioListItem[] = Array.from(store.values()).map(toListItem);

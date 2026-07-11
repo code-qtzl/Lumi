@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import scenariosRouter from './routes/scenarios';
+import { sessionsRouter } from './routes/sessions';
+import { tracesRouter } from './routes/traces';
+import { loadScenarioCards } from './scenarios/registry';
 
 interface Message {
 	id: number;
@@ -14,7 +17,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/scenarios', scenariosRouter);
+loadScenarioCards();
+
+app.use('/api/scenarios', scenariosRouter);
+app.use('/api/sessions', sessionsRouter);
+app.use('/api/traces', tracesRouter);
 
 let messages: Message[] = [];
 let nextId = 1;

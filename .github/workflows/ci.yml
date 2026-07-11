@@ -21,5 +21,9 @@ jobs:
         run: cd client && npm run build
       - name: Server typecheck
         run: cd server && npm run typecheck
+      - name: Server tests
+        run: cd server && npm test
+      - name: Eval harness (anchor validity gate)
+        run: cd server && npm run eval
       - name: Validate shared contracts
         run: cd shared/contracts && python validate.py
