@@ -23,10 +23,13 @@ import { PROMPT_VERSION } from '../traveler/prompt';
 import { llmStats, resetLlmStats } from '../traveler/llm-shared';
 import { Transcript } from '../contracts';
 
-// Space out turns to stay under free-tier RPM (guard retries can double a
-// turn's calls). Groq's free tier is far looser than Gemini's, hence the
-// provider-aware default. Override with PROBE_TURN_DELAY_MS (0 = no pacing).
-const DEFAULT_DELAY_MS = process.env.GROQ_API_KEY ? 2500 : 7000;
+// Pace turns to fit free-tier limits. Groq's binding constraint is TOKENS per
+// minute (12k TPM on llama-3.3-70b): each call re-sends the system prompt +
+// full history, ~1.5k tokens by late-session, so ~8 calls/min max → 12s/turn
+// leaves headroom for guard retries. Gemini's constraint is requests/min.
+// Live sessions never hit this — human typing cadence is far slower.
+// Override with PROBE_TURN_DELAY_MS (0 = no pacing, for paid tiers).
+const DEFAULT_DELAY_MS = process.env.GROQ_API_KEY ? 12_000 : 7000;
 const TURN_DELAY_MS = Number(process.env.PROBE_TURN_DELAY_MS ?? DEFAULT_DELAY_MS);
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
