@@ -1,84 +1,164 @@
-# Beacon App
+# Lumi — Training Simulator
 
-A full-stack starter template with a React client, Express server, and Docker setup.
+An AI-powered training simulator for frontline professionals to practice recognising human trafficking behavioral indicators through role-play scenarios. Built for the **Call for Code AI Hackathon**.
 
-The included demo is a simple message board that stores data in memory (no database required), so you can run the stack immediately and replace the UI and API as you build out Beacon.
+A trainee conducts a text interview with an AI-played traveler persona. When ready, they commit a **refer** or **no action** decision and receive a scored debrief across 5 rubric dimensions.
 
-## Prerequisites
+---
 
-- Docker
+## Quick Start
 
-## Docker Setup
+### Option A — No API key (fixture mode, works immediately)
+
+```bash
+# install all deps from the repo root
+npm run install:all
+
+# terminal 1 — server on :3000
+cd server
+npm run server
+
+# terminal 2 — client on :5173
+cd client
+npm run dev
+```
+
+Open **http://localhost:5173**
+
+### Option B — With OpenAI (real AI responses)
+
+```bash
+cd server
+Copy-Item .env.example .env   # Windows
+# cp .env.example .env        # Mac/Linux
+```
+
+Edit `server/.env` and set:
+```
+OPENAI_API_KEY=sk-proj-your_key_here
+```
+
+Then start both terminals as above. The startup log will confirm:
+```
+[traveler] engine: gpt-4o-mini
+```
+
+### Option C — Docker
 
 ```bash
 docker compose up --build
 ```
 
-Then open your browser to `http://localhost:5173`
+Open **http://localhost:5173**
 
-<details>
-<summary>NPM Setup (no Docker)</summary>
+---
 
-**Prerequisites:** Node.js 22.x and npm 11.x
+## How It Works
 
-1. Install dependencies for both client and server:
-
-```bash
-npm run install:all
+```
+Pick a scenario  →  Interview the traveler  →  Make a decision  →  See your debrief
 ```
 
-2. Start the server (runs on port 3000):
+| Step | What happens |
+|---|---|
+| **Scenario list** | Choose a practice scenario (difficulty 1–3) |
+| **Session chat** | Type questions; the AI traveler responds based on their persona and backstory |
+| **Decision** | Type an optional reason, then click **No Action** or **Refer** |
+| **Debrief** | Rubric scores (1–5) across 5 dimensions, decision outcome, and teaching points |
 
-```bash
-cd server
-npm run server
-```
+---
 
-3. In a new terminal, start the client (runs on port 5173):
+## API Reference
 
-```bash
-cd client
-npm run dev
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/scenarios` | List all scenarios |
+| `GET` | `/api/scenarios/:id` | Trainee-safe view (no ground truth) |
+| `GET` | `/api/scenarios/:id/reveal` | Full card with reveal — debrief only |
+| `POST` | `/api/scenarios` | Create a scenario (Zod validated) |
+| `POST` | `/api/auth/token` | Mint a JWT `{ trainee_id }` |
+| `POST` | `/api/sessions` | Start a session; traveler speaks first |
+| `POST` | `/api/sessions/:id/turn` | Submit a turn, get traveler reply |
+| `POST` | `/api/sessions/:id/end` | Commit decision, get transcript |
+| `GET` | `/api/sessions/:id/transcript` | Fetch completed transcript |
+| `GET` | `/api/sessions/:id` | Session view or transcript |
+| `POST` | `/api/sessions/:id/feedback` | Score session → FeedbackReport |
+| `GET` | `/api/sessions/:id/feedback` | Retrieve cached report |
+| `GET` | `/api/traces` | Session lifecycle events |
 
-4. Open your browser to `http://localhost:5173`
+---
 
-</details>
+## Environment Variables
 
-## Developer Quickstart
+Copy `server/.env.example` to `server/.env` and fill in what you need.
 
-For a fast local development setup:
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Server port |
+| `OPENAI_API_KEY` | — | Enables GPT traveler. Priority over Gemini. |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use |
+| `GEMINI_API_KEY` | — | Enables Gemini traveler (fallback to OpenAI) |
+| `JWT_SECRET` | — | Enables JWT auth. Leave blank for open dev mode. |
+| `JWT_EXPIRY` | `8h` | Token lifetime |
+| `ALLOWED_ORIGIN` | `*` | CORS origin (set to your frontend URL in prod) |
+| `RATE_LIMIT_MAX` | `20` | Max session creations per IP per minute |
 
-```bash
-# install both server and client deps from the repo root
-npm run install:all
+**Traveler priority:** `OPENAI_API_KEY` → `GEMINI_API_KEY` → fixture (no key needed)
 
-# start the server in one terminal
-cd server
-npm run server
-
-# start the client in another terminal
-cd client
-npm run dev
-```
-
-Then open `http://localhost:5173`.
-
-If you need environment variables for the server, copy `server/.env.example` to `server/.env`.
-
-The repository also includes an active CI workflow at `.github/workflows/ci.yml` that runs on pull requests and pushes to `main`.
+---
 
 ## Project Structure
 
 ```
-beacon-app/
-├── client/     # React + TypeScript + Vite frontend
-├── server/     # Express API server
-└── docker-compose.yml
+├── client/                        # React 19 + TypeScript + Vite (port 5173)
+│   └── src/
+│       ├── api.ts                 # Typed API client
+│       └── App.tsx                # 3-view training simulator UI
+│
+├── server/                        # Express + ts-node (port 3000)
+│   └── src/
+│       ├── contracts.ts           # Shared TypeScript types
+│       ├── app.ts                 # Express app (middleware + routes)
+│       ├── server.ts              # Entry point (listen)
+│       ├── routes/                # scenarios, sessions, feedback, auth, traces
+│       ├── session/               # Engine, store, types
+│       ├── traveler/              # OpenAI / Gemini / fixture engines
+│       ├── eval/                  # Rubric scorer + harness
+│       ├── feedback/              # Feedback report store
+│       ├── middleware/            # JWT auth
+│       ├── scenarios/             # Scenario card registry
+│       └── tracing/               # Session event tracer
+│
+└── shared/
+    └── contracts/                 # JSON schemas + rubric + indicator catalog
 ```
 
-## Demo Features
+---
 
-- Messages stored in memory (no database required)
-- Client-server communication over REST
-- Hot reload for the client in Docker
+## Running Tests
+
+```bash
+cd server
+npm test          # 82 tests across 5 files
+npm run typecheck
+```
+
+---
+
+## Recent Changes
+
+| # | What was added | Files |
+|---|---|---|
+| 1 | **Feedback endpoint** — scores session against 5 rubric dimensions, idempotent, cached | `routes/feedback.ts`, `feedback/store.ts` |
+| 2 | **Transcript GET** — dedicated endpoint for completed session transcripts | `routes/sessions.ts` |
+| 3 | **JWT auth** — optional token-based auth, transparent in dev | `middleware/auth.ts`, `routes/auth.ts` |
+| 4 | **CORS lockdown** — `ALLOWED_ORIGIN` env var | `app.ts` |
+| 5 | **Rate limiting** — `express-rate-limit` on session creation | `app.ts` |
+| 6 | **Session persistence** — write-through JSON file; sessions survive restarts | `session/store.ts` |
+| 7 | **OpenAI traveler** — GPT-4o-mini via REST, no SDK; priority over Gemini | `traveler/openai.ts`, `traveler/index.ts` |
+| 8 | **Improved fixture traveler** — topic-aware replies, rotating pool; no more stuck loops | `traveler/fixture.ts` |
+| 9 | **Frontend training simulator** — 3-view app replacing placeholder message board | `client/src/App.tsx`, `client/src/api.ts` |
+| 10 | **82 tests** — scenarios CRUD, session HTTP routes, feedback, scorer unit tests | `*.test.ts` files |
+| 11 | **Error handler** — global middleware; no stack trace leaks | `app.ts` |
+| 12 | **`.env.example` audit** — all new vars documented | `server/.env.example` |
+
