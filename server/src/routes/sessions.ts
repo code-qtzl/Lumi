@@ -1,10 +1,11 @@
 /**
  * Session routes — the trainee-facing session runtime API.
  *
- *   POST /api/sessions           — create a new session
- *   POST /api/sessions/:id/turn  — submit a trainee turn
- *   POST /api/sessions/:id/end   — end session with decision (the only way out)
- *   GET  /api/sessions/:id       — transcript when ended, session view while active
+ *   POST /api/sessions                  — create a new session
+ *   POST /api/sessions/:id/turn         — submit a trainee turn
+ *   POST /api/sessions/:id/end          — end session with decision (the only way out)
+ *   GET  /api/sessions/:id/transcript   — fetch the transcript of a completed session
+ *   GET  /api/sessions/:id              — transcript when ended, session view while active
  */
 
 import { Router } from 'express';
@@ -62,6 +63,23 @@ sessionsRouter.post('/:id/end', (req, res) => {
   }
 
   return res.json(result);
+});
+
+/**
+ * GET /api/sessions/:id/transcript
+ * Returns the transcript of a completed session.
+ * 404 if the session does not exist.
+ * 409 if the session is still active — a transcript only exists after a decision is committed.
+ */
+sessionsRouter.get('/:id/transcript', (req, res) => {
+  const transcript = getTranscript(req.params.id);
+
+  if ('error' in transcript) {
+    const isNotFound = transcript.error === 'Session not found';
+    return res.status(isNotFound ? 404 : 409).json({ error: transcript.error });
+  }
+
+  return res.json({ transcript });
 });
 
 sessionsRouter.get('/:id', (req, res) => {

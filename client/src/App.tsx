@@ -1,94 +1,335 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
+import {
+	getScenarios,
+	getScenarioReveal,
+	createSession,
+	submitTurn,
+	endSession,
+	requestFeedback,
+} from './api';
+import type {
+	ScenarioListItem,
+	ScenarioReveal,
+	Turn,
+	FeedbackReport,
+} from './api';
 
-interface Message {
-	id: number;
-	name: string;
-	message: string;
-	timestamp: string;
-}
+type View = 'scenarios' | 'session' | 'feedback';
 
-function App() {
-	const [messages, setMessages] = useState<Message[]>([]); // State to hold messages
-	const [name, setName] = useState(''); // State for the name input
-	const [message, setMessage] = useState(''); // State for the message input
+const DIMENSION_LABELS: Record<string, string> = {
+	'open-questions': 'Open Questions',
+	'trauma-informed-language': 'Trauma-Informed Language',
+	'indicator-recognition': 'Indicator Recognition',
+	'false-positive-discipline': 'False-Positive Discipline',
+	'referral-protocol': 'Referral Protocol',
+};
 
+export default function App() {
+	const [view, setView] = useState<View>('scenarios');
+
+	// ── Scenarios view ────────────────────────────────────────────────────────
+	const [scenarios, setScenarios] = useState<ScenarioListItem[]>([]);
+	const [scenariosError, setScenariosError] = useState('');
+	const [starting, setStarting] = useState<string | null>(null); // scenario_id being started
+
+	// ── Session view ──────────────────────────────────────────────────────────
+	const [sessionId, setSessionId] = useState('');
+	const [currentScenario, setCurrentScenario] = useState<ScenarioListItem | null>(null);
+	const [travelerName, setTravelerName] = useState('');
+	const [turns, setTurns] = useState<Turn[]>([]);
+	const [sessionStatus, setSessionStatus] = useState('active');
+	const [nudge, setNudge] = useState<string | null>(null);
+	const [turnText, setTurnText] = useState('');
+	const [submitting, setSubmitting] = useState(false);
+	const [sessionError, setSessionError] = useState('');
+	const [decisionReason, setDecisionReason] = useState('');
+	const [deciding, setDeciding] = useState(false);
+	const chatEndRef = useRef<HTMLDivElement>(null);
+
+	// ── Feedback view ─────────────────────────────────────────────────────────
+	const [feedback, setFeedback] = useState<FeedbackReport | null>(null);
+	const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
+	const [feedbackError, setFeedbackError] = useState('');
+
+	// ── Load scenarios on mount ───────────────────────────────────────────────
 	useEffect(() => {
-		fetchMessages(); // Fetch messages when the component mounts
+		getScenarios()
+			.then(setScenarios)
+			.catch(() => setScenariosError('Could not load scenarios. Is the server running?'));
 	}, []);
 
-	const fetchMessages = async () => {
+	// ── Auto-scroll chat to bottom ────────────────────────────────────────────
+	useEffect(() => {
+		chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+	}, [turns]);
+
+	// ── Handlers ──────────────────────────────────────────────────────────────
+
+	async function handleStartSession(scenario: ScenarioListItem) {
+		setStarting(scenario.scenario_id);
 		try {
-			const response = await fetch('http://localhost:3000/messages');
-			const data = await response.json();
-			setMessages(data);
-		} catch (error) {
-			console.error('Error fetching messages:', error);
+			const session = await createSession(scenario.scenario_id);
+			setSessionId(session.session_id);
+			setCurrentScenario(scenario);
+			setTravelerName(session.traveler_name);
+			setTurns(session.opening_turns);
+			setSessionStatus('active');
+			setNudge(null);
+			setTurnText('');
+			setDecisionReason('');
+			setSessionError('');
+			setView('session');
+		} catch (e) {
+			setScenariosError((e as Error).message);
+		} finally {
+			setStarting(null);
 		}
-	};
+	}
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault(); // Prevent form submission from reloading the page
-		if (!name.trim() || !message.trim()) return;
-
+	async function handleSubmitTurn(e: React.FormEvent) {
+		e.preventDefault();
+		if (!turnText.trim() || submitting) return;
+		setSubmitting(true);
+		setSessionError('');
 		try {
-			const response = await fetch('http://localhost:3000/messages', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, message }),
-			});
-
-			if (response.ok) {
-				setName('');
-				setMessage('');
-				fetchMessages();
-			}
-		} catch (error) {
-			console.error('Error posting message:', error);
+			const result = await submitTurn(sessionId, turnText.trim());
+			setTurns(prev => [...prev, result.turn, ...result.traveler_turns]);
+			setSessionStatus(result.session_status);
+			setNudge(result.nudge ?? null);
+			setTurnText('');
+		} catch (e) {
+			setSessionError((e as Error).message);
+		} finally {
+			setSubmitting(false);
 		}
-	};
+	}
 
-	return (
-		<div className='App'>
-			<h1>Beacon App</h1>
-			<div className='messages'>
-				{messages.length === 0 ? (
-					<p className='no-messages'>No messages yet.</p>
-				) : (
-					messages
-						.slice()
-						.reverse()
-						.map((msg) => (
-							<div key={msg.id} className='message'>
-								<strong>{msg.name}</strong>
-								<p>{msg.message}</p>
-								<small>
-									{new Date(msg.timestamp).toLocaleString()}
-								</small>
-							</div>
-						))
+	async function handleDecision(decision: 'refer' | 'no_action') {
+		setDeciding(true);
+		setSessionError('');
+		try {
+			await endSession(sessionId, decision, decisionReason || undefined);
+			// Score in parallel with fetching the reveal
+			const [fb, rv] = await Promise.all([
+				requestFeedback(sessionId),
+				getScenarioReveal(currentScenario!.scenario_id),
+			]);
+			setFeedback(fb);
+			setReveal(rv);
+			setFeedbackError('');
+			setView('feedback');
+		} catch (e) {
+			setSessionError((e as Error).message);
+		} finally {
+			setDeciding(false);
+		}
+	}
+
+	function handleReset() {
+		setFeedback(null);
+		setReveal(null);
+		setFeedbackError('');
+		setView('scenarios');
+	}
+
+	// ── Render ────────────────────────────────────────────────────────────────
+
+	if (view === 'scenarios') {
+		return (
+			<div className="lumi-app">
+				<header className="lumi-header">
+					<h1>Lumi</h1>
+					<p className="lumi-subtitle">Training Simulator — Choose a scenario to practice</p>
+				</header>
+				{scenariosError && <div className="lumi-error">{scenariosError}</div>}
+				{scenarios.length === 0 && !scenariosError && (
+					<p className="lumi-loading">Loading scenarios…</p>
 				)}
+				<ul className="scenario-list">
+					{scenarios.map(s => (
+						<li key={s.scenario_id} className="scenario-card">
+							<div className="scenario-info">
+								<span className="scenario-title">{s.title}</span>
+								{s.difficulty && (
+									<span className="scenario-difficulty">
+										{'●'.repeat(s.difficulty)}{'○'.repeat(3 - s.difficulty)}
+									</span>
+								)}
+							</div>
+							<button
+								className="btn btn-primary"
+								onClick={() => handleStartSession(s)}
+								disabled={starting === s.scenario_id}
+							>
+								{starting === s.scenario_id ? 'Starting…' : 'Start'}
+							</button>
+						</li>
+					))}
+				</ul>
 			</div>
+		);
+	}
 
-			<div className='post-section'>
-				<h2>Post a Message</h2>
-				<form onSubmit={handleSubmit}>
+	if (view === 'session') {
+		const canSubmitTurn = sessionStatus === 'active' || sessionStatus === 'nudged';
+		const mustDecide = sessionStatus === 'awaiting_decision';
+
+		return (
+			<div className="lumi-app lumi-session">
+				<header className="lumi-header">
+					<button className="btn-back" onClick={handleReset}>← Scenarios</button>
+					<div className="session-meta">
+						<span className="session-title">{currentScenario?.title}</span>
+						<span className={`session-badge badge-${sessionStatus}`}>{sessionStatus.replace('_', ' ')}</span>
+					</div>
+				</header>
+
+				<div className="chat-thread">
+					{turns.map(turn => (
+						<div key={turn.turn_id} className={`bubble bubble-${turn.role}`}>
+							<span className="bubble-label">
+								{turn.role === 'trainee' ? 'You' : turn.role === 'companion' ? 'Companion' : travelerName}
+							</span>
+							<p className="bubble-text">{turn.text}</p>
+						</div>
+					))}
+					{nudge === 'consider_deciding' && (
+						<div className="nudge-banner">
+							You've asked many questions — consider making your decision.
+						</div>
+					)}
+					{mustDecide && (
+						<div className="nudge-banner nudge-hard">
+							Turn limit reached. You must now make your decision.
+						</div>
+					)}
+					<div ref={chatEndRef} />
+				</div>
+
+				{sessionError && <div className="lumi-error lumi-error-inline">{sessionError}</div>}
+
+				{canSubmitTurn && !mustDecide && (
+					<form className="turn-form" onSubmit={handleSubmitTurn}>
+						<input
+							className="turn-input"
+							type="text"
+							placeholder={`Say something to ${travelerName}…`}
+							value={turnText}
+							onChange={e => setTurnText(e.target.value)}
+							disabled={submitting}
+							autoFocus
+						/>
+						<button className="btn btn-primary" type="submit" disabled={submitting || !turnText.trim()}>
+							{submitting ? '…' : 'Send'}
+						</button>
+					</form>
+				)}
+
+				<div className="decision-panel">
 					<input
-						type='text'
-						placeholder='Your name'
-						value={name}
-						onChange={(e) => setName(e.target.value)}
+						className="reason-input"
+						type="text"
+						placeholder="Optional: state your reason…"
+						value={decisionReason}
+						onChange={e => setDecisionReason(e.target.value)}
+						disabled={deciding}
 					/>
-					<textarea
-						placeholder='Your message'
-						value={message}
-						onChange={(e) => setMessage(e.target.value)}
-					/>
-					<button type='submit'>Post Message</button>
-				</form>
+					<div className="decision-buttons">
+						<button
+							className="btn btn-no-action"
+							onClick={() => handleDecision('no_action')}
+							disabled={deciding}
+						>
+							{deciding ? 'Processing…' : 'No Action'}
+						</button>
+						<button
+							className="btn btn-refer"
+							onClick={() => handleDecision('refer')}
+							disabled={deciding}
+						>
+							{deciding ? 'Processing…' : 'Refer'}
+						</button>
+					</div>
+				</div>
 			</div>
-		</div>
-	);
+		);
+	}
+
+	// ── Feedback view ─────────────────────────────────────────────────────────
+	if (view === 'feedback' && feedback) {
+		const { decision_outcome, dimensions, summary } = feedback;
+		const avgScore = dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length;
+
+		return (
+			<div className="lumi-app lumi-feedback">
+				<header className="lumi-header">
+					<h1>Debrief</h1>
+					<p className="lumi-subtitle">{currentScenario?.title}</p>
+				</header>
+
+				<div className="decision-outcome">
+					<span className={`outcome-badge ${decision_outcome.appropriate ? 'outcome-correct' : 'outcome-incorrect'}`}>
+						{decision_outcome.appropriate ? '✓ Correct decision' : '✗ Incorrect decision'}
+					</span>
+					<span className="outcome-detail">
+						You chose <strong>{decision_outcome.trainee_decision.replace('_', ' ')}</strong> — scenario was <strong>{decision_outcome.ground_truth_type}</strong>
+					</span>
+				</div>
+
+				<div className="avg-score">
+					Average score: <strong>{avgScore.toFixed(1)} / 5</strong>
+				</div>
+
+				<div className="summary-text">{summary}</div>
+
+				<section className="rubric-section">
+					<h2>Rubric</h2>
+					{dimensions.map(dim => (
+						<div key={dim.dimension_id} className="rubric-row">
+							<div className="rubric-header">
+								<span className="rubric-name">{DIMENSION_LABELS[dim.dimension_id] ?? dim.dimension_id}</span>
+								<span className="rubric-score">{dim.score}/5</span>
+							</div>
+							<div className="score-bar-track">
+								<div
+									className={`score-bar score-bar-${dim.score}`}
+									style={{ width: `${(dim.score / 5) * 100}%` }}
+								/>
+							</div>
+							<p className="rubric-rationale">{dim.rationale}</p>
+						</div>
+					))}
+				</section>
+
+				{reveal && (
+					<section className="reveal-section">
+						<h2>What was actually happening</h2>
+						<p className="reveal-summary">{reveal.reveal.summary}</p>
+						{reveal.reveal.teaching_points.length > 0 && (
+							<>
+								<h3>Teaching points</h3>
+								<ul className="teaching-points">
+									{reveal.reveal.teaching_points.map((pt, i) => (
+										<li key={i}>{pt}</li>
+									))}
+								</ul>
+							</>
+						)}
+					</section>
+				)}
+
+				{feedbackError && <div className="lumi-error">{feedbackError}</div>}
+
+				<div className="feedback-actions">
+					<button className="btn btn-primary" onClick={handleReset}>
+						Try Another Scenario
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	return null;
 }
 
-export default App;

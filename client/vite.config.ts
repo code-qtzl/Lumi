@@ -5,10 +5,16 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
 	plugins: [react()],
 	server: {
-		host: true, // bind to 0.0.0.0 so Docker can expose the port
+		host: true,
 		port: 5173,
 		watch: {
-			usePolling: true, // required for HMR to work inside Docker containers
+			usePolling: true,
+		},
+		proxy: {
+			'/api': {
+				target: 'http://localhost:3000',
+				changeOrigin: true,
+			},
 		},
 	},
 });

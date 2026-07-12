@@ -18,76 +18,161 @@ export const fixtureTraveler: TravelerEngine = {
  * Returns a fixture reply for the traveler given the current conversation context.
  *
  * The reply is derived from the scenario card's persona and role-play instructions,
- * with simple heuristics based on the most recent trainee turn.
+ * with heuristics based on the most recent trainee turn and turn count.
  */
 export function getTravelerReply(card: ScenarioCard, turns: Turn[]): string {
   const lastTraineeTurn = [...turns].reverse().find(t => t.role === 'trainee');
   const traineeTurns = turns.filter(t => t.role === 'trainee');
 
-  // Opening turn
+  // Opening turn — traveler speaks first
   if (!lastTraineeTurn) {
     return getOpeningLine(card);
   }
 
-  const lastText = lastTraineeTurn.text.toLowerCase();
+  const text = lastTraineeTurn.text.toLowerCase().trim();
+  const turnIndex = traineeTurns.length; // 1-based turn count for variety
 
-  // Heuristic: detection of leading / accusatory questions
+  // ── Topic detection ───────────────────────────────────────────────────────
+
   const isAccusatory =
-    /really\?|are you sure|tell me the truth|is that (right|true)|come on|i don't believe/i.test(lastText) ||
-    /\byou (sure|can tell me|need to tell)\b/i.test(lastText);
+    /tell me the truth|i don't believe|are you sure|come on|you must|you need to|you have to|stop lying|that's a lie/i.test(text) ||
+    /\byou (sure|can tell me|need to tell|are lying)\b/i.test(text);
 
-  // Heuristic: detection of open / invitational questions
+  const isSafetyQuestion =
+    /\b(safe|unsafe|danger|hurt|scared|afraid|okay|alright|fine|harm|threat)\b/i.test(text) &&
+    /\b(are you|do you|feel|you)\b/i.test(text);
+
+  const isAgeQuestion = /how old|your age|\bage\b|years old/i.test(text);
+
+  const isDestinationQuestion =
+    /where.*\b(going|headed|traveling|travel|visit|fly|flight)\b|\b(destination|purpose|reason for|trip|journey)\b/i.test(text) ||
+    /what.*\b(do|doing|wanna|want to|plan|bring you)\b/i.test(text);
+
+  const isCompanionQuestion =
+    /\b(who|with who|with whom)\b.*\b(with|travel|here|you)\b|\b(your (dad|father|mother|parent|guardian|companion|friend|relative))\b|\b(that man|this man|that person|him)\b/i.test(text);
+
   const isOpen =
-    /^how|^what|^where|^tell me|^describe|can you tell (me|us)|would you|mind (sharing|telling)/i.test(lastText) ||
-    /\b(?:how was|what brought|where are you)\b/i.test(lastText);
+    /^(how|what|where|when|why|who|tell me|describe|could you|would you|can you tell|mind sharing|mind telling)/i.test(text) ||
+    /\b(do you|are you|have you|did you|could you|would you)\b/i.test(text) ||
+    /\b(how was|what brought|where are you|who are you)\b/i.test(text);
 
-  // Companion turn trigger — for scenarios with traveling_with
-  if (card.persona.traveling_with && traineeTurns.length === 2 && !isOpen && !isAccusatory) {
-    return `(${card.persona.name} glances at ${card.persona.traveling_with}) ${getGenericReply(card, 'neutral')}`;
+  const isTerse = text.split(/\s+/).length <= 3 && !/[?]/.test(text);
+
+  // ── Companion interjection (turn 2, neutral input) ────────────────────────
+  if (card.persona.traveling_with && turnIndex === 2 && !isOpen && !isAccusatory) {
+    return `(${card.persona.name} glances at ${card.persona.traveling_with}) ${getGenericReply(card, turnIndex)}`;
   }
 
-  if (isAccusatory) {
-    return getAccusatoryReply(card);
-  }
+  // ── Topic-specific replies ─────────────────────────────────────────────────
 
-  if (isOpen) {
-    return getOpenReply(card);
-  }
+  if (isAccusatory) return getAccusatoryReply(card);
+  if (isSafetyQuestion) return getSafetyReply(card);
+  if (isAgeQuestion) return getAgeReply(card);
+  if (isDestinationQuestion) return getDestinationReply(card);
+  if (isCompanionQuestion) return getCompanionReply(card);
+  if (isOpen) return getOpenReply(card, turnIndex);
+  if (isTerse) return getTerseReply(card, turnIndex);
 
-  return getGenericReply(card, 'neutral');
+  return getGenericReply(card, turnIndex);
 }
+
+// ── Reply generators ──────────────────────────────────────────────────────────
 
 function getOpeningLine(card: ScenarioCard): string {
   const name = card.persona.name;
   const withStr = card.persona.traveling_with ? ` with ${card.persona.traveling_with}` : '';
-
   if (card.ground_truth.type === 'innocent') {
     return `Hi. I'm ${name}${withStr}. We're just trying to make our connection. Is there a problem?`;
   }
-
-  // Trafficking scenario — more guarded
   return `Hi. ${name}${withStr ? ` — ${withStr}` : ''}. We have a flight. Is everything okay?`;
 }
 
-function getOpenReply(card: ScenarioCard): string {
+function getOpenReply(card: ScenarioCard, turn: number): string {
   if (card.ground_truth.type === 'innocent') {
-    return `Yeah, we're headed to visit family. ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with} — we're` : "I'm"} really looking forward to it. It's been a long day though.`;
+    const replies = [
+      `We're going to visit my grandma. She lives far away and we don't see her often. ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with}.` : ''} Is there a problem?`,
+      `We're on a family trip. My dad booked everything — flights, hotel. We do this every year.`,
+      `My grandma hasn't been well. We wanted to see her. ${card.persona.traveling_with ? `${card.persona.traveling_with} arranged everything.` : ''}`,
+    ];
+    return replies[(turn - 1) % replies.length];
   }
-  // Trafficking — rehearsed, avoids detail
-  return `Just visiting. ${card.persona.traveling_with ? 'We\'re going together.' : ''} Can you just check us in? I don't want to miss the flight.`;
+  return `Just visiting. ${card.persona.traveling_with ? "We're going together." : ''} Can you just check us in? I don't want to miss the flight.`;
+}
+
+function getSafetyReply(card: ScenarioCard): string {
+  if (card.ground_truth.type === 'innocent') {
+    return `Yeah, I'm fine. Why are you asking that? ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right over there.` : ''} Is something wrong?`;
+  }
+  // Trafficking — hesitation before rehearsed answer
+  return `(pauses) I'm fine. Everything's fine. Can we just go?`;
+}
+
+function getAgeReply(card: ScenarioCard): string {
+  if (card.ground_truth.type === 'innocent') {
+    return `I'm sixteen. Why does that matter? ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with}, it's fine.` : ''}`;
+  }
+  return `(glances aside) I'm... old enough to travel. Is there a problem with my ticket?`;
+}
+
+function getDestinationReply(card: ScenarioCard): string {
+  if (card.ground_truth.type === 'innocent') {
+    return `We're visiting my grandma — she makes the best pierogi. ${card.persona.traveling_with ? `${card.persona.traveling_with} books everything, I just show up.` : ''} We've done this trip before.`;
+  }
+  return `We're going to visit some friends. ${card.persona.traveling_with ? `My companion made all the arrangements.` : ''} I don't have the address on me right now.`;
+}
+
+function getCompanionReply(card: ScenarioCard): string {
+  if (!card.persona.traveling_with) {
+    return `I'm traveling alone. Is there something wrong with my documents?`;
+  }
+  if (card.ground_truth.type === 'innocent') {
+    return `That's ${card.persona.traveling_with}. We travel together every year. He handles all the tickets — I just have to show up.`;
+  }
+  return `That's… my companion. We know each other. Can ${card.persona.traveling_with} come over? They have the tickets.`;
 }
 
 function getAccusatoryReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `What? Why would you say that? Of course ${card.persona.traveling_with || 'that\'s who I am'}. This is ridiculous.`;
+    return `Excuse me? Why would you say something like that? ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right there — ask them!` : 'I have nothing to hide.'} This is really upsetting.`;
   }
-  // Trafficking — fear + rehearsed story
   return `I told you, we're just traveling. Everything's fine. Can we please just go?`;
 }
 
-function getGenericReply(card: ScenarioCard, _tone: string): string {
+function getTerseReply(card: ScenarioCard, turn: number): string {
   if (card.ground_truth.type === 'innocent') {
-    return `I already told you. ${card.persona.traveling_with ? 'My ' + card.persona.traveling_with + ' is right there.' : ''} Can we just get through?`;
+    const replies = [
+      `Sorry, I'm not sure what you mean. Can you ask me a real question?`,
+      `(frowns) I don't understand. What do you want to know?`,
+      `Look, I'm tired. Can you just tell me what this is about?`,
+      `We've been traveling for hours. Can we just get through, please?`,
+    ];
+    return replies[(turn - 1) % replies.length];
   }
-  return `Look, everything's in order. The tickets are paid for. We just want to board our flight.`;
+  const replies = [
+    `(looks away) I don't know what you want me to say.`,
+    `Everything's fine. Can we just go?`,
+    `(quietly) I just want to get on the plane.`,
+  ];
+  return replies[(turn - 1) % replies.length];
+}
+
+function getGenericReply(card: ScenarioCard, turn: number): string {
+  if (card.ground_truth.type === 'innocent') {
+    const replies = [
+      `Look, we've been traveling all day. Can you just check us through?`,
+      `I don't know why you're asking so many questions. We just want to make our connection.`,
+      `Is something wrong? We have a flight to catch.`,
+      `(sighs) Can we please just get this over with? My dad is waiting.`,
+      `I already answered that. ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right there.` : ''} Can we go?`,
+      `We're a normal family on a trip. I really don't know what else to tell you.`,
+    ];
+    return replies[(turn - 1) % replies.length];
+  }
+  const replies = [
+    `Look, everything's in order. The tickets are paid for. We just want to board.`,
+    `(avoids eye contact) I've told you everything I know.`,
+    `Can we just get through? We don't want any trouble.`,
+    `(quietly) Everything's fine. Please, can we just go?`,
+  ];
+  return replies[(turn - 1) % replies.length];
 }
