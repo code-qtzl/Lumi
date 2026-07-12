@@ -25,7 +25,12 @@ loadScenarioCards();
 
 app.use('/api/scenarios', scenariosRouter);
 app.use('/api/sessions', sessionsRouter);
-app.use('/api/traces', tracesRouter);
+
+// Dev-only: traces contain raw pre-guard model output (i.e. ground-truth
+// leaks the guard suppressed) — never expose them to a trainee session.
+if (process.env.NODE_ENV !== 'production' || process.env.DEV_TRACES === '1') {
+  app.use('/api/traces', tracesRouter);
+}
 
 app.listen(PORT, () => {
   console.log(`[server] Session runtime running on http://localhost:${PORT}`);

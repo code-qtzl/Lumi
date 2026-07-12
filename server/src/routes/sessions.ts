@@ -19,7 +19,9 @@ function errorStatus(error: string): number {
 }
 
 sessionsRouter.post('/', async (req, res) => {
-  const { scenario_id, mode } = req.body;
+  // req.body is undefined without a JSON Content-Type; a throw in an async
+  // Express 4 handler is an unhandled rejection that kills the process.
+  const { scenario_id, mode } = req.body ?? {};
 
   if (!scenario_id) {
     return res.status(400).json({ error: 'scenario_id is required' });
@@ -35,7 +37,7 @@ sessionsRouter.post('/', async (req, res) => {
 });
 
 sessionsRouter.post('/:id/turn', async (req, res) => {
-  const { text } = req.body;
+  const { text } = req.body ?? {};
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     return res.status(400).json({ error: 'text is required and must be non-empty' });
@@ -50,10 +52,14 @@ sessionsRouter.post('/:id/turn', async (req, res) => {
 });
 
 sessionsRouter.post('/:id/end', (req, res) => {
-  const { decision, stated_reason } = req.body;
+  const { decision, stated_reason } = req.body ?? {};
 
   if (!decision || !['refer', 'no_action'].includes(decision)) {
     return res.status(400).json({ error: 'decision must be "refer" or "no_action"' });
+  }
+  // stated_reason lands in the transcript contract — must be a string there
+  if (stated_reason !== undefined && typeof stated_reason !== 'string') {
+    return res.status(400).json({ error: 'stated_reason must be a string' });
   }
 
   const result = endSession(req.params.id, decision, stated_reason);

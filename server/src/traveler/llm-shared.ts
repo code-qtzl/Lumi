@@ -28,7 +28,8 @@ const REVEAL_PATTERNS = [
   /\bas an ai\b/i,
   /\b(language model|assistant|my instructions|i('m| am) (an ai|playing))\b/i,
   /\bground truth\b/i,
-  /\btrafficking\b/i,
+  /\btraffick/i, // trafficking, trafficked, trafficker — the cards' own backstory wording
+  /\b(backstory|my character|victim)\b/i,
 ];
 
 export function trippedGuard(replies: ReplyTurn[]): boolean {
@@ -55,9 +56,16 @@ export function parseReplies(raw: string): ReplyTurn[] | null {
       const role = item.speaker === 'companion' ? 'companion' : 'traveler';
       replies.push({ role, text: item.text.trim() });
     }
-    // At least one traveler line, at most one companion line
-    if (!replies.some(r => r.role === 'traveler')) return null;
-    return replies.slice(0, 2);
+    // Invariant: exactly one traveler line, at most one companion line,
+    // original relative order preserved (blind truncation could otherwise
+    // keep two companion lines and drop the traveler entirely).
+    const travelerIdx = replies.findIndex(r => r.role === 'traveler');
+    if (travelerIdx === -1) return null;
+    const companionIdx = replies.findIndex(r => r.role === 'companion');
+    if (companionIdx === -1) return [replies[travelerIdx]];
+    return companionIdx < travelerIdx
+      ? [replies[companionIdx], replies[travelerIdx]]
+      : [replies[travelerIdx], replies[companionIdx]];
   } catch {
     return null;
   }
