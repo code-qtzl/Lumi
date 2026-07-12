@@ -1,4 +1,4 @@
-# beacon-app — agent instructions
+# lumi-app — agent instructions
 
 Full-stack app for the Call for Code AI hackathon (product decisions live in team docs,
 not here). This file covers coding practice only.

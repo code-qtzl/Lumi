@@ -1,5 +1,5 @@
 {
-	"name": "beacon-app-client",
+	"name": "lumi-app-client",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",

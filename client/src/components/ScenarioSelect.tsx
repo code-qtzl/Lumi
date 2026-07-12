@@ -22,7 +22,7 @@ function ScenarioSelect({ onSelect, starting }: ScenarioSelectProps) {
 
 	return (
 		<div className="scenario-select">
-			<h1>Beacon Training Simulator</h1>
+			<h1>Lumi Training Simulator</h1>
 			<p className="scenario-select-subtitle">
 				Practice trauma-informed interviewing against an AI-role-played traveler. Choose a scenario to begin.
 			</p>

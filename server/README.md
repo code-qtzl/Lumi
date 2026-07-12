@@ -1,6 +1,6 @@
-# Beacon App — Server
+# Lumi App — Server
 
-Express.js API server for Beacon App.
+Express.js API server for Lumi App.
 
 ## Getting Started
 

@@ -1,5 +1,5 @@
 /**
- * Beacon app server — thin mount point.
+ * Lumi app server — thin mount point.
  *
  * Route handlers live in src/routes/ (one file per domain). Keep this file
  * minimal: parallel branches add their own routers here, so merges stay

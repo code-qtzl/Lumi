@@ -1,6 +1,6 @@
-# Beacon App — Client
+# Lumi App — Client
 
-React + TypeScript + Vite frontend for Beacon App.
+React + TypeScript + Vite frontend for Lumi App.
 
 ## Getting Started
 

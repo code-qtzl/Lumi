@@ -1,10 +1,10 @@
-# Beacon App: Trauma-Informed Risk Scoring Tool
+# Lumi App: Trauma-Informed Risk Scoring Tool
 
 A web-based AI assistant for airport and transit officers that guides trauma-informed questioning, analyzes responses, assigns risk levels, and recommends safe next steps or escalation when needed.
 
 ## Overview
 
-**Beacon** is a decision-support tool designed to help officers conduct trauma-informed interviews while identifying potential risk indicators related to human trafficking and exploitation. It combines:
+**Lumi** is a decision-support tool designed to help officers conduct trauma-informed interviews while identifying potential risk indicators related to human trafficking and exploitation. It combines:
 
 - **Conversational Interface**: Officers enter observations and traveler responses in a chat-like format
 - **Real-Time Risk Analysis**: AI analyzes for trafficking indicators across 6 key categories
