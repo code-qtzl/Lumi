@@ -87,8 +87,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export const getScenarios = () =>
 	api<ScenarioListItem[]>('/scenarios');
 
-export const getScenarioReveal = (id: string) =>
-	api<ScenarioReveal>(`/scenarios/${id}/reveal`);
+// The reveal is session-scoped and only available after the decision —
+// there is no public per-scenario reveal endpoint (ground truth stays hidden
+// while a session could still be played against the card).
+export const getSessionReveal = (session_id: string) =>
+	api<ScenarioReveal>(`/sessions/${session_id}/reveal`);
 
 export const createSession = (scenario_id: string) =>
 	api<SessionCreated>('/sessions', {

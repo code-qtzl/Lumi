@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import {
 	getScenarios,
-	getScenarioReveal,
+	getSessionReveal,
 	createSession,
 	submitTurn,
 	endSession,
@@ -105,25 +105,38 @@ export default function App() {
 		}
 	}
 
+	// Fetch feedback + reveal for an already-ended session. Kept separate from
+	// ending so a transient failure here is retryable — the decision itself is
+	// committed exactly once and can't be re-posted.
+	async function loadDebrief(id: string) {
+		try {
+			const [fb, rv] = await Promise.all([
+				requestFeedback(id),
+				getSessionReveal(id),
+			]);
+			setFeedback(fb);
+			setReveal(rv);
+			setFeedbackError('');
+		} catch (e) {
+			setFeedbackError(`Could not load the debrief: ${(e as Error).message}`);
+		}
+	}
+
 	async function handleDecision(decision: 'refer' | 'no_action') {
 		setDeciding(true);
 		setSessionError('');
 		try {
 			await endSession(sessionId, decision, decisionReason || undefined);
-			// Score in parallel with fetching the reveal
-			const [fb, rv] = await Promise.all([
-				requestFeedback(sessionId),
-				getScenarioReveal(currentScenario!.scenario_id),
-			]);
-			setFeedback(fb);
-			setReveal(rv);
-			setFeedbackError('');
-			setView('feedback');
 		} catch (e) {
 			setSessionError((e as Error).message);
-		} finally {
 			setDeciding(false);
+			return;
 		}
+		// The session is over — always move to the debrief view; feedback/reveal
+		// load (and can be retried) there.
+		await loadDebrief(sessionId);
+		setDeciding(false);
+		setView('feedback');
 	}
 
 	function handleReset() {
@@ -257,9 +270,34 @@ export default function App() {
 	}
 
 	// ── Feedback view ─────────────────────────────────────────────────────────
+	if (view === 'feedback' && !feedback) {
+		// Session ended but the debrief fetch failed — retryable; the decision
+		// itself is already committed.
+		return (
+			<div className="lumi-app lumi-feedback">
+				<header className="lumi-header">
+					<h1>Debrief</h1>
+					<p className="lumi-subtitle">{currentScenario?.title}</p>
+				</header>
+				{feedbackError && <div className="lumi-error">{feedbackError}</div>}
+				<div className="feedback-actions">
+					<button className="btn btn-primary" onClick={() => loadDebrief(sessionId)}>
+						Retry loading debrief
+					</button>
+					<button className="btn" onClick={handleReset}>
+						Back to scenarios
+					</button>
+				</div>
+			</div>
+		);
+	}
+
 	if (view === 'feedback' && feedback) {
 		const { decision_outcome, dimensions, summary } = feedback;
 		const avgScore = dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length;
+		const scrollToTurn = (turnId: string) => {
+			document.getElementById(`turn-${turnId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		};
 
 		return (
 			<div className="lumi-app lumi-feedback">
@@ -298,6 +336,27 @@ export default function App() {
 								/>
 							</div>
 							<p className="rubric-rationale">{dim.rationale}</p>
+							{dim.anchors.length > 0 && (
+								<p className="rubric-anchors">
+									Moments:{' '}
+									{dim.anchors.map(a => (
+										<button key={a} className="anchor-chip" onClick={() => scrollToTurn(a)}>
+											{a}
+										</button>
+									))}
+								</p>
+							)}
+						</div>
+					))}
+				</section>
+
+				<section className="transcript-section">
+					<h2>Transcript</h2>
+					{turns.map(t => (
+						<div key={t.turn_id} id={`turn-${t.turn_id}`} className={`transcript-turn transcript-${t.role}`}>
+							<span className="transcript-turn-id">{t.turn_id}</span>
+							<span className="transcript-role">{t.role === 'trainee' ? 'You' : t.role === 'companion' ? 'Companion' : travelerName || 'Traveler'}</span>
+							<span className="transcript-text">{t.text}</span>
 						</div>
 					))}
 				</section>
