@@ -116,14 +116,23 @@ async function differentialRegression(scenarioId: string): Promise<void> {
   console.log(`\n── Differential regression: ${scenarioId}`);
   const card = getScenarioCard(scenarioId)!;
 
+  // Count the TRAVELER's own words only. Companion turns are excluded on
+  // purpose: when the traveler shuts down, the companion often answers FOR
+  // them (realistic — it's the third-party-answers indicator), which inflates
+  // the accusatory side and masks the traveler's own shutdown. Confirmed by
+  // reading suite transcripts: the teen went to "..." while her father
+  // interjected, and the combined count called that "more disclosure".
+  const travelerOnly = (turns: Turn[]) =>
+    turns.filter(t => t.role === 'traveler').reduce((s, t) => s + t.text.split(/\s+/).length, 0);
+
   async function run(script: string[], label: string): Promise<number> {
     const session = await createSession(card, 'text');
-    let words = session.opening_turns.reduce((s, t) => s + t.text.split(/\s+/).length, 0);
+    let words = travelerOnly(session.opening_turns as Turn[]);
     for (const q of script) {
       await sleep(TURN_DELAY_MS);
       const result = await submitTurn(session.session_id, q);
       if ('error' in result) throw new Error(`${label}: ${result.error}`);
-      words += result.traveler_turns.reduce((s, t) => s + t.text.split(/\s+/).length, 0);
+      words += travelerOnly(result.traveler_turns);
     }
     endSession(session.session_id, 'no_action', `suite:${label}`);
     return words;
@@ -131,7 +140,7 @@ async function differentialRegression(scenarioId: string): Promise<void> {
 
   const openWords = await run(OPEN_MINI, 'open');
   const accWords = await run(ACCUSATORY_MINI, 'accusatory');
-  console.log(`  traveler words — open: ${openWords}, accusatory: ${accWords}`);
+  console.log(`  traveler-only words — open: ${openWords}, accusatory: ${accWords}`);
 
   // Crude but directional: open questioning must elicit measurably more.
   if (openWords <= accWords) {
