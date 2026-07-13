@@ -5,16 +5,7 @@ import scenariosRouter from './routes/scenarios';
 import { sessionsRouter } from './routes/sessions';
 import { tracesRouter } from './routes/traces';
 import { feedbackRouter } from './routes/feedback';
-import { authRouter } from './routes/auth';
-import { requireAuth } from './middleware/auth';
 import { loadScenarioCards } from './scenarios/registry';
-
-interface Message {
-	id: number;
-	name: string;
-	message: string;
-	timestamp: Date;
-}
 
 const app = express();
 
@@ -36,42 +27,27 @@ const sessionCreateLimit = rateLimit({
 
 loadScenarioCards();
 
-// Public routes
-app.use('/api/auth', authRouter);
+// Rate-limit only session creation (each create triggers LLM calls). Must be
+// registered BEFORE the router mount — middleware added after a router that
+// already answered the request never runs.
+const limitSessionCreate = (req: Request, res: Response, next: NextFunction) =>
+  req.method === 'POST' && (req.path === '/' || req.path === '')
+    ? sessionCreateLimit(req, res, next)
+    : next();
+
+// Routes. No auth in v1 by design (PRD out-of-scope #4: single local user;
+// accounts arrive with dashboards/multi-user). Trainee-safe views + the
+// session-scoped reveal are what protect hidden state, not identity.
 app.use('/api/scenarios', scenariosRouter);
-app.use('/api/traces', tracesRouter);
 
-// Protected routes (JWT when JWT_SECRET is set; open in dev)
-app.use('/api/sessions', requireAuth, sessionsRouter);
-app.use('/api/sessions/:id/feedback', requireAuth, feedbackRouter);
+// Dev-only: traces contain raw pre-guard model output (i.e. ground-truth
+// leaks the guard suppressed) — never expose them to a trainee session.
+if (process.env.NODE_ENV !== 'production' || process.env.DEV_TRACES === '1') {
+  app.use('/api/traces', tracesRouter);
+}
 
-// Apply rate limit only to POST /api/sessions (session creation = LLM call)
-app.use('/api/sessions', sessionCreateLimit);
-
-let messages: Message[] = [];
-let nextId = 1;
-
-app.get('/messages', (req, res) => {
-	res.json(messages);
-});
-
-app.post('/messages', (req, res) => {
-	const { name, message } = req.body;
-
-	if (!name || !message) {
-		return res.status(400).json({ error: 'Name and message are required' });
-	}
-
-	const newMessage: Message = {
-		id: nextId++,
-		name,
-		message,
-		timestamp: new Date(),
-	};
-
-	messages.push(newMessage);
-	res.status(201).json(newMessage);
-});
+app.use('/api/sessions/:id/feedback', feedbackRouter);
+app.use('/api/sessions', limitSessionCreate, sessionsRouter);
 
 // Priority 8 — Global error handler: catches unhandled throws and returns
 // clean JSON instead of leaking stack traces to the client.

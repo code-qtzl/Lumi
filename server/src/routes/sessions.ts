@@ -10,6 +10,7 @@
 
 import { Router } from 'express';
 import { createSession, submitTurn, endSession, getTranscript, getSessionView } from '../session/engine';
+import { getSession } from '../session/store';
 import { getScenarioCard } from '../scenarios/registry';
 
 export const sessionsRouter = Router();
@@ -20,10 +21,16 @@ function errorStatus(error: string): number {
 }
 
 sessionsRouter.post('/', async (req, res) => {
-  const { scenario_id, mode } = req.body;
+  // req.body is undefined without a JSON Content-Type; a throw in an async
+  // Express 4 handler is an unhandled rejection that kills the process.
+  const { scenario_id, mode } = req.body ?? {};
 
   if (!scenario_id) {
     return res.status(400).json({ error: 'scenario_id is required' });
+  }
+
+  if (mode !== undefined && !['text', 'voice'].includes(mode)) {
+    return res.status(400).json({ error: 'mode must be "text" or "voice"' });
   }
 
   const card = getScenarioCard(scenario_id);
@@ -36,7 +43,7 @@ sessionsRouter.post('/', async (req, res) => {
 });
 
 sessionsRouter.post('/:id/turn', async (req, res) => {
-  const { text } = req.body;
+  const { text } = req.body ?? {};
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     return res.status(400).json({ error: 'text is required and must be non-empty' });
@@ -51,10 +58,14 @@ sessionsRouter.post('/:id/turn', async (req, res) => {
 });
 
 sessionsRouter.post('/:id/end', (req, res) => {
-  const { decision, stated_reason } = req.body;
+  const { decision, stated_reason } = req.body ?? {};
 
   if (!decision || !['refer', 'no_action'].includes(decision)) {
     return res.status(400).json({ error: 'decision must be "refer" or "no_action"' });
+  }
+  // stated_reason lands in the transcript contract — must be a string there
+  if (stated_reason !== undefined && typeof stated_reason !== 'string') {
+    return res.status(400).json({ error: 'stated_reason must be a string' });
   }
 
   const result = endSession(req.params.id, decision, stated_reason);
@@ -80,6 +91,24 @@ sessionsRouter.get('/:id/transcript', (req, res) => {
   }
 
   return res.json({ transcript });
+});
+
+/**
+ * GET /api/sessions/:id/reveal
+ * The full scenario card (ground truth, reveal, teaching points) for the
+ * debrief — ONLY once the session has ended via a decision. This is the sole
+ * reveal endpoint: hidden state stays hidden while any session could still
+ * be played against the card (U1/F1; vision: scenario reveal is debrief-only).
+ */
+sessionsRouter.get('/:id/reveal', (req, res) => {
+  const state = getSession(req.params.id);
+  if (!state) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  if (state.status !== 'completed') {
+    return res.status(409).json({ error: 'Session not ended — the reveal is only available after a decision is committed' });
+  }
+  return res.json(state.scenario_card);
 });
 
 sessionsRouter.get('/:id', (req, res) => {

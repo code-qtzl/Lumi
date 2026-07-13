@@ -31,6 +31,9 @@ function ensureLoaded(): void {
 }
 
 function persist(): void {
+  // Tests must never write through to the real data file — parallel vitest
+  // workers race on it and leftover test sessions load as real ones next boot.
+  if (process.env.NODE_ENV === 'test') return;
   try {
     fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
     fs.writeFileSync(STORE_PATH, JSON.stringify(Array.from(sessions.entries()), null, 2));
