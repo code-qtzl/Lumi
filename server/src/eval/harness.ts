@@ -26,6 +26,15 @@ export interface DimensionEval {
   exact: number;
   agreement_pct: number;
   exact_pct: number;
+  /**
+   * Failure detection treated as binary (score ≤ 2 = failing technique).
+   * The labeled set is deliberately failure-heavy, so raw agreement alone
+   * flatters — precision/recall show whether the scorer actually catches
+   * bad technique vs. rubber-stamping (lumi-eval-plan.md, L2).
+   * null when the set contains no reference failures/flags for the dimension.
+   */
+  precision: number | null;
+  recall: number | null;
 }
 
 export interface TagEval {
@@ -57,7 +66,7 @@ export function runEval(): EvalResult {
   const results: ExampleEvalResult[] = [];
   let totalPassed = 0;
 
-  const byDimension: Record<string, { total: number; within_one: number; exact: number }> = {};
+  const byDimension: Record<string, { total: number; within_one: number; exact: number; tp: number; fp: number; fn: number }> = {};
   const byTag: Record<string, { total: number; diffs: number[] }> = {};
   let anchorValid = 0;
   let anchorInvalid = 0;
@@ -92,11 +101,19 @@ export function runEval(): EvalResult {
 
       // Aggregate by dimension
       if (!byDimension[refDim.dimension_id]) {
-        byDimension[refDim.dimension_id] = { total: 0, within_one: 0, exact: 0 };
+        byDimension[refDim.dimension_id] = { total: 0, within_one: 0, exact: 0, tp: 0, fp: 0, fn: 0 };
       }
-      byDimension[refDim.dimension_id].total++;
-      if (withinOne) byDimension[refDim.dimension_id].within_one++;
-      if (diff === 0) byDimension[refDim.dimension_id].exact++;
+      const agg = byDimension[refDim.dimension_id];
+      agg.total++;
+      if (withinOne) agg.within_one++;
+      if (diff === 0) agg.exact++;
+
+      // Binary failure detection: score ≤ 2 = failing technique flagged
+      const refFail = refDim.score <= 2;
+      const predFail = predScore <= 2;
+      if (refFail && predFail) agg.tp++;
+      else if (!refFail && predFail) agg.fp++;
+      else if (refFail && !predFail) agg.fn++;
     }
 
     const decisionMatch = report.decision_outcome.appropriate === example.reference.decision_outcome.appropriate;
@@ -128,6 +145,8 @@ export function runEval(): EvalResult {
       exact: data.exact,
       agreement_pct: Math.round((data.within_one / data.total) * 100),
       exact_pct: Math.round((data.exact / data.total) * 100),
+      precision: data.tp + data.fp > 0 ? Math.round((data.tp / (data.tp + data.fp)) * 100) / 100 : null,
+      recall: data.tp + data.fn > 0 ? Math.round((data.tp / (data.tp + data.fn)) * 100) / 100 : null,
     };
   }
 
@@ -166,9 +185,11 @@ export function printEvalSummary(result: EvalResult): void {
   console.log(`  Agreement rate:     ${result.agreement_pct}%`);
   console.log(`  Anchor validity:    ${result.anchor_validity.valid} valid, ${result.anchor_validity.invalid} invalid`);
   console.log('───────────────────────────────────────────');
-  console.log('  By dimension:');
+  console.log('  By dimension (P/R = failure detection, ref/pred score ≤2):');
   for (const [dimId, data] of Object.entries(result.by_dimension)) {
-    console.log(`    ${dimId.padEnd(30)} ${data.within_one}/${data.total} within ±1 (${data.agreement_pct}%)  exact: ${data.exact}/${data.total} (${data.exact_pct}%)`);
+    const p = data.precision === null ? ' n/a' : data.precision.toFixed(2);
+    const r = data.recall === null ? ' n/a' : data.recall.toFixed(2);
+    console.log(`    ${dimId.padEnd(30)} ${data.within_one}/${data.total} within ±1 (${data.agreement_pct}%)  exact: ${data.exact}/${data.total} (${data.exact_pct}%)  P: ${p}  R: ${r}`);
   }
   console.log('───────────────────────────────────────────');
   console.log('  By tag:');
