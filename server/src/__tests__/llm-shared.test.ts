@@ -46,10 +46,25 @@ describe('parseReplies', () => {
     expect(parseReplies('[{"speaker":"companion","text":"Only me."}]')).toBeNull();
   });
 
-  it('rejects empty text, non-string text, and non-JSON', () => {
+  it('rejects empty or non-string text in JSON replies', () => {
     expect(parseReplies('[{"speaker":"traveler","text":"  "}]')).toBeNull();
     expect(parseReplies('[{"speaker":"traveler","text":42}]')).toBeNull();
-    expect(parseReplies('Sure.')).toBeNull();
+  });
+
+  it('accepts plain in-character prose as a traveler line (json wrapper failed, reply is real)', () => {
+    expect(parseReplies('We are just visiting my grandmother.')).toEqual([
+      { role: 'traveler', text: 'We are just visiting my grandmother.' },
+    ]);
+  });
+
+  it('strips a trailing JSON fragment from mixed prose output', () => {
+    const r = parseReplies('I told you, he is my uncle. {"speaker":"companion","text":"That');
+    expect(r).toEqual([{ role: 'traveler', text: 'I told you, he is my uncle.' }]);
+  });
+
+  it('unwraps the v2 object-root format {"turns":[...]}', () => {
+    const r = parseReplies('{"turns":[{"speaker":"traveler","text":"Hi."},{"speaker":"companion","text":"Hello."}]}');
+    expect(r?.map(t => t.role)).toEqual(['traveler', 'companion']);
   });
 });
 

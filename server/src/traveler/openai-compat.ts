@@ -43,7 +43,15 @@ function toMessages(systemPrompt: string, turns: Turn[]): Array<{ role: string; 
 }
 
 async function callChatCompletions(cfg: OpenAiCompatConfig, systemPrompt: string, turns: Turn[], sessionId: string, attempt: number): Promise<ReplyTurn[] | null> {
-  const body = { model: cfg.model, messages: toMessages(systemPrompt, turns), ...PARAMS };
+  // json_object mode pins the model to a single JSON object root — the prompt
+  // asks for {"turns":[...]} and parseReplies unwraps it. Llama-class models
+  // drift into prose without this.
+  const body = {
+    model: cfg.model,
+    messages: toMessages(systemPrompt, turns),
+    response_format: { type: 'json_object' as const },
+    ...PARAMS,
+  };
 
   // One rate-limit retry honoring Retry-After when present.
   for (let fetchTry = 1; fetchTry <= 2; fetchTry++) {

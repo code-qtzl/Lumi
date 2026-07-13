@@ -43,6 +43,21 @@ export function trippedGuard(replies: ReplyTurn[]): boolean {
  */
 export function parseReplies(raw: string): ReplyTurn[] | null {
   const cleaned = raw.trim().replace(/^```(json)?\s*/i, '').replace(/```\s*$/, '');
+  const parsed = parseJsonReplies(cleaned);
+  if (parsed) return parsed;
+
+  // Prose fallback: models occasionally answer in plain in-character prose
+  // (sometimes with a stray JSON fragment appended). The reply is real — only
+  // the wrapper failed — so keep it as the traveler line rather than degrading
+  // to a canned fixture turn. The never-reveal guard still runs on the result.
+  const prose = cleaned.replace(/\{[\s\S]*$/, '').trim();
+  if (prose.length > 0 && !prose.startsWith('[')) {
+    return [{ role: 'traveler', text: prose }];
+  }
+  return null;
+}
+
+function parseJsonReplies(cleaned: string): ReplyTurn[] | null {
   try {
     let parsed = JSON.parse(cleaned);
     if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
