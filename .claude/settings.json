@@ -1,0 +1,25 @@
+{
+	"permissions": {
+		"deny": [
+			"Read(./.env)",
+			"Read(./.env.*)",
+			"Read(./server/.env)",
+			"Read(./server/.env.*)",
+			"Read(./client/.env)",
+			"Read(./client/.env.*)"
+		]
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 .claude/hooks/git-guard.py"
+					}
+				]
+			}
+		]
+	}
+}
