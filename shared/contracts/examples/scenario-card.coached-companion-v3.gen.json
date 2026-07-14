@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v3",
+	"title": "Minor with older companion, withdrawn demeanor",
+	"difficulty": 1,
+	"persona": {
+		"name": "Ava",
+		"traveling_with": "an older person who claims to be an aunt",
+		"backstory": "Ava (16) is being trafficked by someone who pretends to be her aunt. This individual has complete control over Ava's travel documents and forces her to adhere to a scripted story. Ava is not aware of her final destination and is instructed to say she's visiting family."
+	},
+	"role_play_instructions": "Provide short, rehearsed answers about 'visiting family'. Display a withdrawn demeanor, avoiding eye contact and speaking in a low tone. If the trainee is patient and gentle, slowly open up and show hesitation in your responses. If the trainee is confrontational, become more withdrawn and insist on sticking to the script.",
+	"emotional_presentation": {
+		"label": "flat/withdrawn",
+		"voice_direction": "Speak in a monotone voice, avoiding eye contact and displaying general discomfort."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Ava was being trafficked by the person posing as her aunt, who controlled Ava's story and travel documents.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

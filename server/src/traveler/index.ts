@@ -1,12 +1,14 @@
 /**
  * Traveler selection (F7: fixture is the $0 default; the app runs keyless).
  *
- * Priority:
- *   1. GROQ_API_KEY            — Groq free tier, Llama-70B-class (recommended dev loop)
- *   2. OPENAI_API_KEY          — OpenAI (paid; gpt-4o-mini default)
- *   3. TRAVELER_API_KEY + TRAVELER_API_BASE — any OpenAI-compatible host (e.g. Cerebras)
- *   4. GEMINI_API_KEY          — Gemini (free-tier rate limits are tight)
- *   5. none                    — fixture
+ * Team cost strategy: Groq free tier for shared/live work, Ollama for
+ * unlimited local iteration. Priority:
+ *   1. GROQ_API_KEY            — Groq free tier, Llama-70B-class (recommended)
+ *   2. OLLAMA_MODEL            — local Ollama ($0, offline; OLLAMA_BASE_URL to override)
+ *   3. OPENAI_API_KEY          — OpenAI (paid; gpt-4o-mini default)
+ *   4. TRAVELER_API_KEY + TRAVELER_API_BASE — any OpenAI-compatible host
+ *   5. GEMINI_API_KEY          — Gemini (free-tier rate limits are tight)
+ *   6. none                    — fixture
  */
 
 import { TravelerEngine } from './types';
@@ -20,7 +22,7 @@ let traveler: TravelerEngine | null = null;
 export function getTraveler(): TravelerEngine {
   if (traveler) return traveler;
 
-  const { GROQ_API_KEY, OPENAI_API_KEY, TRAVELER_API_KEY, TRAVELER_API_BASE, GEMINI_API_KEY, TRAVELER_MODEL } = process.env;
+  const { GROQ_API_KEY, OLLAMA_MODEL, OLLAMA_BASE_URL, OPENAI_API_KEY, TRAVELER_API_KEY, TRAVELER_API_BASE, GEMINI_API_KEY, TRAVELER_MODEL } = process.env;
 
   if (GROQ_API_KEY) {
     traveler = createOpenAiCompatTraveler({
@@ -28,6 +30,13 @@ export function getTraveler(): TravelerEngine {
       apiKey: GROQ_API_KEY,
       model: TRAVELER_MODEL || 'llama-3.3-70b-versatile',
       label: 'groq',
+    });
+  } else if (OLLAMA_MODEL) {
+    traveler = createOpenAiCompatTraveler({
+      apiBase: OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+      apiKey: 'ollama', // Ollama ignores auth; the header just needs to exist
+      model: OLLAMA_MODEL,
+      label: 'ollama',
     });
   } else if (OPENAI_API_KEY) {
     traveler = createOpenAITraveler(OPENAI_API_KEY);

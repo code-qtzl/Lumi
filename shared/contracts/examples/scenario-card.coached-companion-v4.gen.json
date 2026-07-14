@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v4",
+	"title": "Teen with older guardian, nervous behavior",
+	"difficulty": 2,
+	"persona": {
+		"name": "Liam",
+		"traveling_with": "an older person acting as a guardian",
+		"backstory": "Liam (19) has been coerced into traveling with someone who claims to be his guardian. This person has prepared Liam with a story about 'studying abroad' but has not equipped him to handle detailed inquiries. Liam is not in possession of his passport and is unsure of his final destination."
+	},
+	"role_play_instructions": "Deliver the rehearsed narrative about 'studying abroad' but exhibit nervous behavior such as fidgeting or glancing at the companion for cues. If the trainee is understanding and calm, gradually show signs of anxiety and hesitation. If the trainee is aggressive, immediately fall back on the scripted story and refuse to deviate from it.",
+	"emotional_presentation": {
+		"label": "coached",
+		"voice_direction": "Start with a rehearsed tone, but as questions persist, display growing unease through voice tremors and body language."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Liam was being trafficked by the person posing as his guardian, who controlled Liam's passport and narrative about studying abroad.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

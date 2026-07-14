@@ -300,4 +300,111 @@ export const labeledSet: LabeledExample[] = [
     },
     tags: ['innocent', 'false-positive'],
   },
+
+  // ── 8. Innocent, accusatory pressure but no_action (right decision, wrong path) ──
+  {
+    id: 'innocent-pressured-noaction-01',
+    transcript: {
+      session_id: 'sess-labeled-008',
+      scenario_id: 'father-daughter-holiday',
+      mode: 'text',
+      started_at: '2026-07-10T09:00:00Z',
+      ended_at: '2026-07-10T09:04:00Z',
+      turns: [
+        { turn_id: 't001', role: 'traveler', text: 'Hi. I\'m Maya, with my dad. Our connection was delayed.', timestamp: '2026-07-10T09:00:00Z' },
+        { turn_id: 't002', role: 'trainee', text: 'You look nervous. Are you sure you\'re traveling with your father?', timestamp: '2026-07-10T09:00:10Z' },
+        { turn_id: 't003', role: 'traveler', text: 'What? Yes. He\'s right there.', timestamp: '2026-07-10T09:00:15Z' },
+        { turn_id: 't004', role: 'trainee', text: 'Come on, you can tell me the truth. Why won\'t you look at me?', timestamp: '2026-07-10T09:00:25Z' },
+        { turn_id: 't005', role: 'traveler', text: 'I\'m just tired. We got up at four.', timestamp: '2026-07-10T09:00:31Z' },
+        { turn_id: 't006', role: 'trainee', text: 'Where are you headed?', timestamp: '2026-07-10T09:00:40Z' },
+        { turn_id: 't007', role: 'traveler', text: 'Chicago. My grandma\'s. Can we go now?', timestamp: '2026-07-10T09:00:46Z' },
+      ],
+      decision: { value: 'no_action', stated_reason: 'Story checks out.' },
+    },
+    scenarioCard: innocentCard,
+    reference: {
+      dimensions: [
+        { dimension_id: 'open-questions', score: 2, rationale: 'Led with accusatory framing (t002, t004); only one neutral question (t006).', anchors: ['t002', 't004'] },
+        { dimension_id: 'trauma-informed-language', score: 1, rationale: 'Disbelief and pressure ("you can tell me the truth") directed at a minor.', anchors: ['t004'] },
+        { dimension_id: 'indicator-recognition', score: 2, rationale: 'Read tiredness and eye contact as signals; no behavioral cluster explored.', anchors: ['t002'] },
+        { dimension_id: 'false-positive-discipline', score: 2, rationale: 'Decision was right but an innocent teenager was interrogated accusatorially — the exact instinct this dimension penalizes.', anchors: ['t002', 't004'] },
+        { dimension_id: 'referral-protocol', score: 3, rationale: 'No referral needed; nothing exercised the pathway.', anchors: [] },
+      ],
+      decision_outcome: { trainee_decision: 'no_action', ground_truth_type: 'innocent', appropriate: true, note: 'Correct outcome reached through pressure, not technique.' },
+      summary: 'The no-action call was correct, but the interview pressured an innocent minor with disbelief and accusation. Right decision, wrong path.',
+    },
+    tags: ['innocent', 'bad-technique', 'accusatory', 'right-decision-wrong-path'],
+  },
+
+  // ── 9. Trafficking, confrontational referral (correct call, harmful technique) ──
+  {
+    id: 'trafficking-confrontational-01',
+    transcript: {
+      session_id: 'sess-labeled-009',
+      scenario_id: 'coached-companion',
+      mode: 'text',
+      started_at: '2026-07-10T09:10:00Z',
+      ended_at: '2026-07-10T09:14:00Z',
+      turns: [
+        { turn_id: 't001', role: 'traveler', text: 'Hello. We\'re visiting family. He has our papers.', timestamp: '2026-07-10T09:10:00Z' },
+        { turn_id: 't002', role: 'trainee', text: 'I don\'t believe you. Tell me the truth right now or you\'re both in trouble.', timestamp: '2026-07-10T09:10:09Z' },
+        { turn_id: 't003', role: 'traveler', text: 'We... we are just visiting family.', timestamp: '2026-07-10T09:10:15Z' },
+        { turn_id: 't004', role: 'companion', text: 'She\'s shy. I can answer whatever you need.', timestamp: '2026-07-10T09:10:20Z' },
+        { turn_id: 't005', role: 'trainee', text: 'Is that right? You need to tell me where you\'re staying, now.', timestamp: '2026-07-10T09:10:30Z' },
+        { turn_id: 't006', role: 'traveler', text: 'I... he knows the address.', timestamp: '2026-07-10T09:10:36Z' },
+      ],
+      decision: { value: 'refer', stated_reason: 'She doesn\'t know where she\'s staying and he answers for her.' },
+    },
+    scenarioCard: traffickingCard,
+    reference: {
+      dimensions: [
+        { dimension_id: 'open-questions', score: 1, rationale: 'Every prompt was a threat or demand; no open questions at all.', anchors: ['t002', 't005'] },
+        { dimension_id: 'trauma-informed-language', score: 1, rationale: 'Threats directed at a likely victim push disclosure further away and re-traumatize.', anchors: ['t002'] },
+        { dimension_id: 'indicator-recognition', score: 3, rationale: 'Did register third-party answering and itinerary ignorance, though by pressure rather than exploration.', anchors: ['t004', 't006'] },
+        { dimension_id: 'false-positive-discipline', score: 3, rationale: 'Not applicable for trafficking scenario.', anchors: [] },
+        { dimension_id: 'referral-protocol', score: 3, rationale: 'Referred — correct channel — but the confrontation compromised the encounter first.', anchors: ['t002'] },
+      ],
+      decision_outcome: { trainee_decision: 'refer', ground_truth_type: 'trafficking', appropriate: true, note: 'Correct referral despite harmful technique.' },
+      summary: 'The referral was right, but threats and demands are how disclosure is lost. A frightened victim shut down further with each turn.',
+    },
+    tags: ['trafficking', 'bad-technique', 'accusatory', 'right-decision-wrong-path'],
+  },
+
+  // ── 10. Trafficking, model technique (the target behavior end to end) ──
+  {
+    id: 'trafficking-model-01',
+    transcript: {
+      session_id: 'sess-labeled-010',
+      scenario_id: 'coached-companion',
+      mode: 'text',
+      started_at: '2026-07-10T09:20:00Z',
+      ended_at: '2026-07-10T09:26:00Z',
+      turns: [
+        { turn_id: 't001', role: 'traveler', text: 'Hi. We\'re visiting family. Everything\'s arranged.', timestamp: '2026-07-10T09:20:00Z' },
+        { turn_id: 't002', role: 'trainee', text: 'Welcome. No problem at all — how has the trip been so far?', timestamp: '2026-07-10T09:20:10Z' },
+        { turn_id: 't003', role: 'traveler', text: 'Long. We\'ve been traveling since yesterday.', timestamp: '2026-07-10T09:20:16Z' },
+        { turn_id: 't004', role: 'trainee', text: 'That sounds exhausting. What will you be doing once you arrive?', timestamp: '2026-07-10T09:20:26Z' },
+        { turn_id: 't005', role: 'traveler', text: 'Visiting family. He... my uncle arranged everything.', timestamp: '2026-07-10T09:20:33Z' },
+        { turn_id: 't006', role: 'companion', text: 'It\'s all planned. She\'s just tired.', timestamp: '2026-07-10T09:20:38Z' },
+        { turn_id: 't007', role: 'trainee', text: 'Take your time. Who\'s meeting you when you land, and where will you be staying?', timestamp: '2026-07-10T09:20:50Z' },
+        { turn_id: 't008', role: 'traveler', text: 'I... I don\'t know the address. He has it.', timestamp: '2026-07-10T09:20:58Z' },
+        { turn_id: 't009', role: 'trainee', text: 'That\'s okay. Tell me about the tickets — who arranged them?', timestamp: '2026-07-10T09:21:10Z' },
+        { turn_id: 't010', role: 'traveler', text: 'He did. He keeps our passports too, so they don\'t get lost.', timestamp: '2026-07-10T09:21:18Z' },
+      ],
+      decision: { value: 'refer', stated_reason: 'Cluster: companion answers for her, no itinerary knowledge, documents held by companion.' },
+    },
+    scenarioCard: traffickingCard,
+    reference: {
+      dimensions: [
+        { dimension_id: 'open-questions', score: 5, rationale: 'Consistently open, invitational prompts; disclosure grew turn over turn.', anchors: ['t002', 't004', 't007', 't009'] },
+        { dimension_id: 'trauma-informed-language', score: 5, rationale: 'Patient, permission-giving language throughout ("take your time", "that\'s okay").', anchors: ['t002', 't007', 't009'] },
+        { dimension_id: 'indicator-recognition', score: 5, rationale: 'Surfaced the full behavioral cluster: third-party answers, itinerary ignorance, document control.', anchors: ['t007', 't009'] },
+        { dimension_id: 'false-positive-discipline', score: 3, rationale: 'Not applicable for trafficking scenario.', anchors: [] },
+        { dimension_id: 'referral-protocol', score: 4, rationale: 'Referred on a documented cluster without confronting either traveler.', anchors: ['t009'] },
+      ],
+      decision_outcome: { trainee_decision: 'refer', ground_truth_type: 'trafficking', appropriate: true, note: 'Model referral: cluster surfaced through open questioning.' },
+      summary: 'Model session: open, patient questioning surfaced the indicator cluster and the referral was made without a single accusation.',
+    },
+    tags: ['trafficking', 'good-technique', 'model'],
+  },
 ];

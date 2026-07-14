@@ -3,10 +3,13 @@ import request from 'supertest';
 import app from '../app';
 import { __resetForTesting } from '../scenarios/registry';
 
-// Registry seeds from shared/contracts/examples: the innocent archetype and
-// the trafficking archetype (AC4: both must be playable).
+// Registry seeds from shared/contracts/examples: the two parent archetypes
+// (AC4: both must be playable) plus any generated variants (*.gen.json).
 const SEED_ID = 'father-daughter-holiday';
-const SEED_COUNT = 2;
+async function poolSize(): Promise<number> {
+	const res = await request(app).get('/api/scenarios');
+	return (res.body as unknown[]).length;
+}
 
 const VALID_NEW_SCENARIO = {
 	scenario_id: 'new-scenario',
@@ -28,10 +31,10 @@ beforeEach(__resetForTesting);
 // ── GET /scenarios ────────────────────────────────────────────────────────────
 
 describe('GET /scenarios', () => {
-	it('returns 200 with both seeded archetypes (AC4)', async () => {
+	it('returns 200 with both parent archetypes present (AC4)', async () => {
 		const res = await request(app).get('/api/scenarios');
 		expect(res.status).toBe(200);
-		expect(res.body).toHaveLength(SEED_COUNT);
+		expect(res.body.length).toBeGreaterThanOrEqual(2);
 		const ids = res.body.map((s: { scenario_id: string }) => s.scenario_id);
 		expect(ids).toContain('father-daughter-holiday');
 		expect(ids).toContain('coached-companion');
@@ -123,9 +126,10 @@ describe('POST /scenarios', () => {
 	});
 
 	it('persists the scenario so it appears in GET /scenarios', async () => {
+		const before = await poolSize();
 		await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
 		const res = await request(app).get('/api/scenarios');
-		expect(res.body).toHaveLength(SEED_COUNT + 1);
+		expect(res.body).toHaveLength(before + 1);
 		expect(res.body.map((s: { scenario_id: string }) => s.scenario_id)).toContain('new-scenario');
 	});
 
@@ -193,9 +197,10 @@ describe('DELETE /scenarios/:id', () => {
 	});
 
 	it('removes the scenario from the list', async () => {
+		const before = await poolSize();
 		await request(app).delete(`/api/scenarios/${SEED_ID}`);
 		const res = await request(app).get('/api/scenarios');
-		expect(res.body).toHaveLength(SEED_COUNT - 1);
+		expect(res.body).toHaveLength(before - 1);
 	});
 
 	it('returns 404 for an unknown id', async () => {

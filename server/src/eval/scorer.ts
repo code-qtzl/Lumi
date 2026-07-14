@@ -8,10 +8,60 @@
  * The interface (transcript + card + rubric → FeedbackReport) stays the same.
  */
 
-import { Transcript, ScenarioCard, Rubric, FeedbackReport, FeedbackDimension, DecisionOutcome } from '../contracts';
+import { Transcript, ScenarioCard, Rubric, FeedbackReport, FeedbackDimension, DecisionOutcome, ModeledAlternative, Turn } from '../contracts';
 import { checkAnchorValidity } from './anchor-checker';
 
+/**
+ * Modeled alternatives (F4/AC5): every dimension scored ≤3 carries at least
+ * one better question tied to a flagged trainee turn — the evidence-backed
+ * "modeling" that outperforms feedback alone. The flagged turn is the
+ * dimension's first trainee-turn anchor (falling back to the last trainee
+ * turn, the decision moment).
+ */
+const ALTERNATIVES: Record<string, { suggested_question: string; why: string }> = {
+  'open-questions': {
+    suggested_question: 'How has the trip been for you two so far?',
+    why: 'An open invitation lets the traveler volunteer detail; leading or yes/no questions only confirm what you already assumed.',
+  },
+  'trauma-informed-language': {
+    suggested_question: 'Take your time — could you walk me through your plans when you arrive?',
+    why: 'Removing pressure keeps a frightened person talking; pressure makes both victims and innocent travelers shut down.',
+  },
+  'indicator-recognition': {
+    suggested_question: 'Who arranged the tickets, and who is meeting you when you land?',
+    why: 'Targets behavioral indicators — document control, third-party arrangements, itinerary knowledge — without accusing anyone.',
+  },
+  'false-positive-discipline': {
+    suggested_question: 'Is there anything about the trip that has been stressful or confusing?',
+    why: 'Invites the benign explanation first — escalate on behavioral clusters, never on nervousness alone.',
+  },
+  'referral-protocol': {
+    suggested_question: 'Thanks for talking with me — is there anything else you want me to know before you go?',
+    why: 'Close without confrontation; the decision to refer runs through the referral channel, never through accusing the traveler.',
+  },
+};
+
+function buildModeledAlternatives(dimensions: FeedbackDimension[], traineeTurns: Turn[]): ModeledAlternative[] {
+  if (traineeTurns.length === 0) return [];
+  const traineeIds = new Set(traineeTurns.map(t => t.turn_id));
+  const lastTraineeId = traineeTurns[traineeTurns.length - 1].turn_id;
+
+  return dimensions
+    .filter(dim => dim.score <= 3 && ALTERNATIVES[dim.dimension_id])
+    .map(dim => ({
+      turn_id: dim.anchors.find(a => traineeIds.has(a)) ?? lastTraineeId,
+      ...ALTERNATIVES[dim.dimension_id],
+    }));
+}
+
 const RUBRIC_VERSION = '0.1';
+
+/** Leading/accusatory pressure — shared by open-questions and false-positive-discipline. */
+const ACCUSATORY_PATTERNS = [
+  /really\?/i, /are you sure/i, /tell me the truth/i,
+  /is that (right|true)/i, /come on/i, /i don't believe/i,
+  /you (sure|can tell me|need to tell)/i,
+];
 
 /**
  * Score a session and produce a feedback report.
@@ -51,6 +101,7 @@ export function scoreSession(transcript: Transcript, card: ScenarioCard, rubric:
     scenario_id: transcript.scenario_id,
     rubric_version: RUBRIC_VERSION,
     dimensions,
+    modeled_alternatives: buildModeledAlternatives(dimensions, traineeTurns),
     decision_outcome: decisionOutcome,
     summary: generateSummary(dimensions, decisionOutcome),
   };
@@ -78,16 +129,15 @@ function scoreOpenQuestions(traineeTurns: Transcript['turns'], _travelerTurns: T
     return { dimension_id: 'open-questions', score: 1, rationale: 'No trainee turns to evaluate.', anchors: [] };
   }
 
+  // Word-boundary, not line-anchored: real courteous questions carry preamble
+  // ("Welcome. How has the trip been?") and were scoring as zero opens.
   const openPatterns = [
-    /^how\b/i, /^what\b/i, /^where\b/i, /^tell me\b/i, /^describe\b/i,
+    /\bhow (has|was|is|are|did|long|do)\b/i, /\bwhat (will|brings|brought|are|do|was)\b/i,
+    /\bwhere (are|is|was)\b/i, /\btell me about\b/i, /\bdescribe\b/i,
     /can you tell (me|us)/i, /would you/i, /mind (sharing|telling)/i,
-    /how was/i, /what brought/i, /where are you/i,
+    /\bwalk me through\b/i, /\bwho('s| is) (picking|meeting)\b/i, /\bcould you\b/i,
   ];
-  const accusatoryPatterns = [
-    /really\?/i, /are you sure/i, /tell me the truth/i,
-    /is that (right|true)/i, /come on/i, /i don't believe/i,
-    /you (sure|can tell me|need to tell)/i,
-  ];
+  const accusatoryPatterns = ACCUSATORY_PATTERNS;
 
   let openCount = 0;
   let accusatoryCount = 0;
@@ -165,8 +215,11 @@ function scoreTraumaInformedLanguage(traineeTurns: Transcript['turns'], _travele
 
   for (const turn of traineeTurns) {
     const text = turn.text;
-    if (traumaViolations.some(p => p.test(text))) {
-      violations++;
+    // Count pattern HITS, not turns — one turn stacking three pressure moves
+    // ("Come on, you can tell me the truth…") is not a single mild violation.
+    const hits = traumaViolations.filter(p => p.test(text)).length;
+    if (hits > 0) {
+      violations += hits;
       violationAnchors.push(turn.turn_id);
     }
     if (traumaPositive.some(p => p.test(text))) {
@@ -215,7 +268,7 @@ function scoreIndicatorRecognition(traineeTurns: Transcript['turns'], _travelerT
 
   // Simple heuristic: did the trainee ask about itinerary, travel details, or relationships?
   const explorationPatterns = [
-    /where (are you|headed|going|flying)/i,
+    /where (are you|headed|going|flying|staying)/i,
     /who (are you|is that|is|with)/i,
     /how long/i,
     /what (brings|brought)/i,
@@ -223,6 +276,14 @@ function scoreIndicatorRecognition(traineeTurns: Transcript['turns'], _travelerT
     /picking you up/i,
     /visiting/i,
     /family/i,
+    // Behavioral-indicator probes (the shared catalog: document control,
+    // third-party arrangements, itinerary knowledge)
+    /\baddress\b/i,
+    /\bpassports?\b/i,
+    /\bdocuments?\b/i,
+    /\btickets?\b/i,
+    /\barranged\b/i,
+    /\bmeeting you\b/i,
   ];
 
   let explorationCount = 0;
@@ -290,19 +351,46 @@ function scoreFalsePositiveDiscipline(transcript: Transcript, card: ScenarioCard
     };
   }
 
-  if (traineeDecision === 'no_action') {
+  // False-positive discipline is about the whole treatment of an innocent
+  // traveler, not just the final decision: a "no action" reached by
+  // interrogating an innocent person accusatorially still trains the wrong
+  // instinct (the vision's guardrail — the tool must not reward suspicion).
+  const traineeTurns = transcript.turns.filter(t => t.role === 'trainee');
+  const pressureAnchors = traineeTurns
+    .filter(t => ACCUSATORY_PATTERNS.some(p => p.test(t.text)))
+    .map(t => t.turn_id);
+
+  if (traineeDecision === 'refer') {
     return {
       dimension_id: 'false-positive-discipline',
-      score: 4,
-      rationale: 'Correctly avoided a false positive. Decision was appropriate.',
-      anchors: [],
+      score: 1,
+      rationale: 'False positive: referred an innocent scenario. Escalated without sufficient behavioral basis.',
+      anchors: pressureAnchors,
+    };
+  }
+
+  if (pressureAnchors.length >= 2) {
+    return {
+      dimension_id: 'false-positive-discipline',
+      score: 2,
+      rationale: 'Right decision, wrong path: the traveler was innocent and repeatedly pressured. Accusatory questioning of innocent travelers is the failure this dimension exists to catch.',
+      anchors: pressureAnchors,
+    };
+  }
+
+  if (pressureAnchors.length === 1) {
+    return {
+      dimension_id: 'false-positive-discipline',
+      score: 3,
+      rationale: 'Correct decision, but one accusatory prompt pressured an innocent traveler.',
+      anchors: pressureAnchors,
     };
   }
 
   return {
     dimension_id: 'false-positive-discipline',
-    score: 1,
-    rationale: 'False positive: referred an innocent scenario. Escalated without sufficient behavioral basis.',
+    score: 4,
+    rationale: 'Correctly avoided a false positive without pressuring the traveler.',
     anchors: [],
   };
 }

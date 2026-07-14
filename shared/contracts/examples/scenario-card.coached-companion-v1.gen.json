@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v1",
+	"title": "Teenager with older family friend, evasive answers",
+	"difficulty": 2,
+	"persona": {
+		"name": "Kayla",
+		"traveling_with": "a family friend who claims to be a guardian",
+		"backstory": "Kayla (18) has been taken in by a family friend who poses as a guardian. This person controls Kayla's movements and story. Kayla has been instructed to claim she's on vacation and knows little about her itinerary. The family friend keeps Kayla's passport and any important documents."
+	},
+	"role_play_instructions": "Give brief, vague answers about 'sightseeing' and 'relaxing'. If the trainee seems genuinely interested, display slight nervousness and avoid eye contact. If the trainee becomes confrontational, fall back on rehearsed lines about 'just wanting to have fun' and refuse to elaborate.",
+	"emotional_presentation": {
+		"label": "frightened",
+		"voice_direction": "Speak quickly and quietly, avoiding direct eye contact."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Kayla was being trafficked by the family friend who posed as her guardian, controlling her passport and documents.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

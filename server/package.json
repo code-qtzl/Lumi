@@ -8,6 +8,7 @@
 		"eval": "ts-node src/eval/run.ts",
 		"probe": "ts-node src/probes/differential.ts",
 		"suite:roleplay": "ts-node src/probes/roleplay-suite.ts",
+		"variations": "ts-node src/variations/generator.ts",
 		"dev": "echo \"🫣 Wrong folder?: 'npm run dev' should be run in ./client directory\" && echo \"💡 Try: 'cd client && npm run dev'\" && exit 1"
 	},
 	"dependencies": {

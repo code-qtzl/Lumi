@@ -112,10 +112,10 @@ describe('POST /api/sessions', () => {
     expect(res.body.opening_turns[0].role).toBe('traveler');
   });
 
-  it('returns 400 when scenario_id is missing', async () => {
+  it('assigns a hidden random scenario when scenario_id is omitted', async () => {
     const res = await request(app).post('/api/sessions').send({});
-    expect(res.status).toBe(400);
-    expect(res.body).toHaveProperty('error');
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('scenario_id');
   });
 
   it('returns 404 for an unknown scenario_id', async () => {
@@ -284,12 +284,13 @@ describe('GET /api/sessions/:id/reveal', () => {
 // ── Robustness: malformed bodies must never kill the process ─────────────────
 
 describe('malformed request bodies', () => {
-  it('POST /api/sessions with a non-JSON body returns 400, server survives', async () => {
+  it('POST /api/sessions with a non-JSON body must not kill the process', async () => {
     const res = await request(app)
       .post('/api/sessions')
       .set('Content-Type', 'text/plain')
       .send('not json');
-    expect(res.status).toBe(400);
+    // Unparsed body = no scenario_id = blind random assignment
+    expect(res.status).toBe(201);
     // Server is still alive and serving
     const alive = await request(app).get('/api/scenarios');
     expect(alive.status).toBe(200);
@@ -337,5 +338,32 @@ describe('session-create rate limit', () => {
     } finally {
       process.env.NODE_ENV = prev;
     }
+  });
+});
+
+// ── Blind scenario assignment (trainee never sees/picks the scenario) ────────
+
+describe('hidden scenario assignment', () => {
+  it('POST /api/sessions with no scenario_id assigns one at random and hides it', async () => {
+    const res = await request(app).post('/api/sessions').send({});
+    expect(res.status).toBe(201);
+    expect(res.body.session_id).toBeDefined();
+    expect(res.body.traveler_name).toBeDefined();
+    expect(res.body).not.toHaveProperty('scenario_id');
+  });
+
+  it('mid-session view does not expose the scenario id', async () => {
+    const created = await request(app).post('/api/sessions').send({});
+    const res = await request(app).get(`/api/sessions/${created.body.session_id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.session).not.toHaveProperty('scenario_id');
+  });
+
+  it('explicit scenario_id (dev/probes) still works and echoes the id', async () => {
+    const res = await request(app)
+      .post('/api/sessions')
+      .send({ scenario_id: 'coached-companion' });
+    expect(res.status).toBe(201);
+    expect(res.body.scenario_id).toBe('coached-companion');
   });
 });

@@ -502,3 +502,42 @@ button:hover {
 .transcript-text {
 	flex: 1;
 }
+
+/* ── Blind start panel (trainee never sees scenarios) ── */
+.start-panel {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 14px;
+}
+.start-blurb {
+	margin: 6px 0 0;
+	color: #aaa;
+	font-size: 0.9rem;
+	line-height: 1.6;
+	max-width: 46ch;
+}
+
+/* ── Modeled alternatives (AC5) ── */
+.alternatives-section {
+	margin-top: 24px;
+}
+.alternatives-section h2 {
+	color: #e2e8f0;
+}
+.alternative-row {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	padding: 8px 0;
+}
+.alternative-question {
+	margin: 0;
+	color: #d6e4f7;
+	font-size: 0.9rem;
+}
+.alternative-why {
+	margin: 4px 0 0;
+	color: #999;
+	font-size: 0.82rem;
+	line-height: 1.5;
+}

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import {
-	getScenarios,
 	getSessionReveal,
 	createSession,
 	submitTurn,
@@ -9,7 +8,6 @@ import {
 	requestFeedback,
 } from './api';
 import type {
-	ScenarioListItem,
 	ScenarioReveal,
 	Turn,
 	FeedbackReport,
@@ -28,14 +26,12 @@ const DIMENSION_LABELS: Record<string, string> = {
 export default function App() {
 	const [view, setView] = useState<View>('scenarios');
 
-	// ── Scenarios view ────────────────────────────────────────────────────────
-	const [scenarios, setScenarios] = useState<ScenarioListItem[]>([]);
-	const [scenariosError, setScenariosError] = useState('');
-	const [starting, setStarting] = useState<string | null>(null); // scenario_id being started
+	// ── Start view ────────────────────────────────────────────────────────────
+	const [startError, setStartError] = useState('');
+	const [starting, setStarting] = useState(false);
 
 	// ── Session view ──────────────────────────────────────────────────────────
 	const [sessionId, setSessionId] = useState('');
-	const [currentScenario, setCurrentScenario] = useState<ScenarioListItem | null>(null);
 	const [travelerName, setTravelerName] = useState('');
 	const [turns, setTurns] = useState<Turn[]>([]);
 	const [sessionStatus, setSessionStatus] = useState('active');
@@ -52,13 +48,6 @@ export default function App() {
 	const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
 	const [feedbackError, setFeedbackError] = useState('');
 
-	// ── Load scenarios on mount ───────────────────────────────────────────────
-	useEffect(() => {
-		getScenarios()
-			.then(setScenarios)
-			.catch(() => setScenariosError('Could not load scenarios. Is the server running?'));
-	}, []);
-
 	// ── Auto-scroll chat to bottom ────────────────────────────────────────────
 	useEffect(() => {
 		chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,12 +55,11 @@ export default function App() {
 
 	// ── Handlers ──────────────────────────────────────────────────────────────
 
-	async function handleStartSession(scenario: ScenarioListItem) {
-		setStarting(scenario.scenario_id);
+	async function handleStartSession() {
+		setStarting(true);
 		try {
-			const session = await createSession(scenario.scenario_id);
+			const session = await createSession();
 			setSessionId(session.session_id);
-			setCurrentScenario(scenario);
 			setTravelerName(session.traveler_name);
 			setTurns(session.opening_turns);
 			setSessionStatus('active');
@@ -81,9 +69,9 @@ export default function App() {
 			setSessionError('');
 			setView('session');
 		} catch (e) {
-			setScenariosError((e as Error).message);
+			setStartError((e as Error).message);
 		} finally {
-			setStarting(null);
+			setStarting(false);
 		}
 	}
 
@@ -149,37 +137,32 @@ export default function App() {
 	// ── Render ────────────────────────────────────────────────────────────────
 
 	if (view === 'scenarios') {
+		// The trainee never sees or picks a scenario — the situation must be
+		// unknown (U1), or the ground truth is given away before the interview.
 		return (
 			<div className="lumi-app">
 				<header className="lumi-header">
 					<h1>Lumi</h1>
-					<p className="lumi-subtitle">Training Simulator — Choose a scenario to practice</p>
+					<p className="lumi-subtitle">Training Simulator</p>
 				</header>
-				{scenariosError && <div className="lumi-error">{scenariosError}</div>}
-				{scenarios.length === 0 && !scenariosError && (
-					<p className="lumi-loading">Loading scenarios…</p>
-				)}
-				<ul className="scenario-list">
-					{scenarios.map(s => (
-						<li key={s.scenario_id} className="scenario-card">
-							<div className="scenario-info">
-								<span className="scenario-title">{s.title}</span>
-								{s.difficulty && (
-									<span className="scenario-difficulty">
-										{'●'.repeat(s.difficulty)}{'○'.repeat(3 - s.difficulty)}
-									</span>
-								)}
-							</div>
-							<button
-								className="btn btn-primary"
-								onClick={() => handleStartSession(s)}
-								disabled={starting === s.scenario_id}
-							>
-								{starting === s.scenario_id ? 'Starting…' : 'Start'}
-							</button>
-						</li>
-					))}
-				</ul>
+				{startError && <div className="lumi-error">{startError}</div>}
+				<div className="scenario-card start-panel">
+					<div className="scenario-info">
+						<span className="scenario-title">Practice an encounter</span>
+						<p className="start-blurb">
+							You'll interview a traveler whose situation you don't know.
+							Ask your questions, then commit to a decision: refer or no action.
+							You'll get a full debrief afterwards.
+						</p>
+					</div>
+					<button
+						className="btn btn-primary"
+						onClick={handleStartSession}
+						disabled={starting}
+					>
+						{starting ? 'Starting…' : 'Start Practice Session'}
+					</button>
+				</div>
 			</div>
 		);
 	}
@@ -193,7 +176,7 @@ export default function App() {
 				<header className="lumi-header">
 					<button className="btn-back" onClick={handleReset}>← Scenarios</button>
 					<div className="session-meta">
-						<span className="session-title">{currentScenario?.title}</span>
+						<span className="session-title">Practice interview — {travelerName}</span>
 						<span className={`session-badge badge-${sessionStatus}`}>{sessionStatus.replace('_', ' ')}</span>
 					</div>
 				</header>
@@ -277,7 +260,7 @@ export default function App() {
 			<div className="lumi-app lumi-feedback">
 				<header className="lumi-header">
 					<h1>Debrief</h1>
-					<p className="lumi-subtitle">{currentScenario?.title}</p>
+					<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
 				</header>
 				{feedbackError && <div className="lumi-error">{feedbackError}</div>}
 				<div className="feedback-actions">
@@ -303,7 +286,7 @@ export default function App() {
 			<div className="lumi-app lumi-feedback">
 				<header className="lumi-header">
 					<h1>Debrief</h1>
-					<p className="lumi-subtitle">{currentScenario?.title}</p>
+					<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
 				</header>
 
 				<div className="decision-outcome">
@@ -349,6 +332,23 @@ export default function App() {
 						</div>
 					))}
 				</section>
+
+				{(feedback.modeled_alternatives?.length ?? 0) > 0 && (
+					<section className="alternatives-section">
+						<h2>Better questions you could have asked</h2>
+						{feedback.modeled_alternatives!.map((alt, i) => (
+							<div key={i} className="alternative-row">
+								<button className="anchor-chip" onClick={() => scrollToTurn(alt.turn_id)}>
+									{alt.turn_id}
+								</button>
+								<div className="alternative-body">
+									<p className="alternative-question">“{alt.suggested_question}”</p>
+									<p className="alternative-why">{alt.why}</p>
+								</div>
+							</div>
+						))}
+					</section>
+				)}
 
 				<section className="transcript-section">
 					<h2>Transcript</h2>

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v4",
+	"title": "Niece and aunt, travel delay",
+	"difficulty": 2,
+	"persona": {
+		"name": "Ruby",
+		"traveling_with": "her aunt, Rachel",
+		"backstory": "Ruby (16) is traveling with her aunt Rachel to attend a music festival. Due to unforeseen travel delays, they are both exhausted and a bit testy. Ruby is listening to music on her headphones to relax."
+	},
+	"role_play_instructions": "Provide brief, slightly annoyed responses initially. If the trainee engages in friendly, open conversation ('What kind of music are you into?'), Ruby will relax and share her interests. However, if the trainee adopts an aggressive tone or tries to separate Ruby from Rachel, Ruby will become uneasy and less communicative.",
+	"emotional_presentation": {
+		"label": "tired/irritable",
+		"voice_direction": "Initially clipped and slightly irritated, softening when treated with patience and kindness, and becoming guarded if feeling threatened."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Ruby and Rachel were on their way to a music festival, and Ruby's initial short responses were a result of tiredness and stress from the delays, not indicative of any trafficking situation.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

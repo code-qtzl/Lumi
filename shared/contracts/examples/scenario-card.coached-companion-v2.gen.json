@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v2",
+	"title": "Youth with older relative, inconsistent details",
+	"difficulty": 3,
+	"persona": {
+		"name": "Cameron",
+		"traveling_with": "an older relative who is supposedly a parent",
+		"backstory": "Cameron (17) is being exploited by someone who claims to be a parent but is actually a trafficker. This person has coached Cameron on what to say to authorities but has not prepared them for follow-up questions. Cameron does not know their final destination and is not allowed to possess their own passport."
+	},
+	"role_play_instructions": "Recite the rehearsed story about 'visiting relatives' but introduce small inconsistencies when asked follow-up questions. If the trainee is gentle and non-confrontational, slowly reveal confusion and uncertainty. If the trainee is aggressive, immediately revert to the rehearsed narrative and deny any discrepancies.",
+	"emotional_presentation": {
+		"label": "coached",
+		"voice_direction": "Deliver the initial story in a flat, mechanical tone, but show growing uncertainty with probing questions."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Cameron was a victim of trafficking, exploited by someone posing as a parent who controlled Cameron's passport and narrative.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

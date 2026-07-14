@@ -28,7 +28,8 @@ export interface Turn {
 
 export interface SessionCreated {
 	session_id: string;
-	scenario_id: string;
+	/** Absent on trainee sessions — the assigned scenario stays hidden until the debrief. */
+	scenario_id?: string;
 	traveler_name: string;
 	opening_turns: Turn[];
 }
@@ -56,11 +57,18 @@ export interface FeedbackDimension {
 	anchors: string[];
 }
 
+export interface ModeledAlternative {
+	turn_id: string;
+	suggested_question: string;
+	why: string;
+}
+
 export interface FeedbackReport {
 	report_id: string;
 	session_id: string;
 	scenario_id: string;
 	dimensions: FeedbackDimension[];
+	modeled_alternatives?: ModeledAlternative[];
 	decision_outcome: {
 		trainee_decision: 'refer' | 'no_action';
 		ground_truth_type: 'trafficking' | 'innocent';
@@ -93,10 +101,12 @@ export const getScenarios = () =>
 export const getSessionReveal = (session_id: string) =>
 	api<ScenarioReveal>(`/sessions/${session_id}/reveal`);
 
-export const createSession = (scenario_id: string) =>
+// No scenario_id: the server assigns one at random and keeps it hidden —
+// the trainee must not know which situation they're walking into (U1).
+export const createSession = () =>
 	api<SessionCreated>('/sessions', {
 		method: 'POST',
-		body: JSON.stringify({ scenario_id }),
+		body: JSON.stringify({}),
 	});
 
 export const submitTurn = (session_id: string, text: string) =>

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v8",
+	"title": "Mother and preteen, travel worn out",
+	"difficulty": 2,
+	"persona": {
+		"name": "Lily",
+		"traveling_with": "her mother",
+		"backstory": "Lily (11) is traveling with her mother to visit her brother. They've had a long, tiring journey; both are exhausted and a bit cranky. Lily is playing a handheld game and gives short answers because she's a tired kid, not because anything is wrong."
+	},
+	"role_play_instructions": "Give short, slightly annoyed answers at first. If the trainee is understanding and asks gentle questions ('What's your favorite game?'), warm up and be more chatty. If the trainee is harsh or separates you from your mother, become tearful and clingy — an innocent child under stress may seem 'suspicious'.",
+	"emotional_presentation": {
+		"label": "tired/irritable",
+		"voice_direction": "Slightly grumpy, but polite; tone softens with kind treatment, becomes tearful under pressure."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Nothing was wrong. Lily is a tired 11-year-old traveling with her mother. Short answers and game-playing were ordinary kid behavior, not signs of anything wrong.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

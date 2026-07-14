@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v1",
+	"title": "Cousin and guardian, missed connection",
+	"difficulty": 2,
+	"persona": {
+		"name": "Aiden",
+		"traveling_with": "his guardian, Ms. Patel",
+		"backstory": "Aiden (16) is traveling with Ms. Patel, his guardian, to visit his aunt in another city for a family reunion. They had a missed connection due to a flight delay and both are tired and frustrated. Aiden is engrossed in his handheld game to pass the time."
+	},
+	"role_play_instructions": "Respond briefly and somewhat distractedly. If the trainee asks open, friendly questions ('What's the reunion about?'), Aiden will open up ('We're celebrating my aunt's birthday'). However, if the trainee is confrontational or tries to separate Aiden from Ms. Patel, become uneasy and less cooperative.",
+	"emotional_presentation": {
+		"label": "tired/irritable",
+		"voice_direction": "Flat, with a hint of irritation, softening when treated with kindness."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Aiden and Ms. Patel were simply traveling to a family reunion, and Aiden's brief responses were due to tiredness and being engrossed in his game, not indicative of any issue.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

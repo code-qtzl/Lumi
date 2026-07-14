@@ -17,6 +17,8 @@ export interface EvalResult {
   by_dimension: Record<string, DimensionEval>;
   by_tag: Record<string, TagEval>;
   anchor_validity: { valid: number; invalid: number };
+  /** AC5: of the reports with any dimension ≤3, how many carry the required modeled alternatives. */
+  modeled_alternatives: { compliant: number; required: number };
   details: ExampleEvalResult[];
 }
 
@@ -70,6 +72,8 @@ export function runEval(): EvalResult {
   const byTag: Record<string, { total: number; diffs: number[] }> = {};
   let anchorValid = 0;
   let anchorInvalid = 0;
+  let ac5Required = 0;
+  let ac5Compliant = 0;
 
   for (const example of labeledSet) {
     const report = scoreSession(example.transcript, example.scenarioCard, rubric);
@@ -77,6 +81,13 @@ export function runEval(): EvalResult {
 
     if (anchorResult.valid) anchorValid++;
     else anchorInvalid++;
+
+    // AC5: every dimension ≤3 carries at least one modeled alternative
+    const lowDims = report.dimensions.filter(d => d.score <= 3).length;
+    if (lowDims > 0) {
+      ac5Required++;
+      if ((report.modeled_alternatives?.length ?? 0) >= lowDims) ac5Compliant++;
+    }
 
     const dimResults: ExampleEvalResult['dimensions'] = [];
     let allWithinOne = true;
@@ -169,6 +180,7 @@ export function runEval(): EvalResult {
     by_dimension: byDimensionSummary,
     by_tag: byTagSummary,
     anchor_validity: { valid: anchorValid, invalid: anchorInvalid },
+    modeled_alternatives: { compliant: ac5Compliant, required: ac5Required },
     details: results,
   };
 }
@@ -184,6 +196,7 @@ export function printEvalSummary(result: EvalResult): void {
   console.log(`  Passed (all dims ±1 + decision): ${result.passed}/${result.total}`);
   console.log(`  Agreement rate:     ${result.agreement_pct}%`);
   console.log(`  Anchor validity:    ${result.anchor_validity.valid} valid, ${result.anchor_validity.invalid} invalid`);
+  console.log(`  Modeled alts (AC5): ${result.modeled_alternatives.compliant}/${result.modeled_alternatives.required} low-scoring reports covered`);
   console.log('───────────────────────────────────────────');
   console.log('  By dimension (P/R = failure detection, ref/pred score ≤2):');
   for (const [dimId, data] of Object.entries(result.by_dimension)) {
