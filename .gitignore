@@ -7,3 +7,6 @@
 .env
 .env.*
 !.env.example
+
+# Local dev tooling config (machine-specific paths)
+.claude/launch.json
