@@ -8,6 +8,7 @@
 import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine } from './types';
 import { fromTravelerPerspective } from './prompt';
+import { getTraveler } from './index';
 
 /** Capitalize a sentence-initial companion reference ("my father" → "My father"). */
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -15,7 +16,17 @@ const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 /** TravelerEngine wrapper — the engine consumes travelers only via this seam. */
 export const fixtureTraveler: TravelerEngine = {
   name: 'fixture',
-  reply: async (card, turns) => [{ role: 'traveler', text: getTravelerReply(card, turns) }],
+  reply: async (card, turns, sessionId) => {
+    // 50% chance to use the real LLM for natural variety
+    if (Math.random() < 0.5) {
+      try {
+        return await getTraveler().reply(card, turns, sessionId);
+      } catch {
+        // Fall through to fixture on error
+      }
+    }
+    return [{ role: 'traveler', text: getTravelerReply(card, turns) }];
+  },
 };
 
 /**
@@ -85,37 +96,28 @@ export function getTravelerReply(card: ScenarioCard, turns: Turn[]): string {
 function getOpeningLine(card: ScenarioCard): string {
   // Natural reaction to being stopped — real people don't announce their
   // name and companion like a form (the UI shows the name separately).
-  // 50% simple greetings, 50% context-specific lines
+  // Indistinguishable lines for both innocent and trafficking (trainee can't tell)
   const plural = card.persona.traveling_with ? 'We' : 'I';
 
-  // Simple greetings (50% of openings)
-  const simpleGreetings = [
+  // All opening lines are indistinguishable - same set for both types
+  const openingLines = [
     'Hi.',
     'Hello.',
     'Good morning.',
     'Good afternoon.',
+    `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`,
+    `Excuse me, can I help you? ${plural}'re just trying to catch our flight.`,
+    `Is there something wrong? We have a connection to make.`,
+    `Sorry, are we in the way? We're trying to get to our gate.`,
+    'Here is my passport.',
+    'Here are my documents and my landing card.',
+    'Hi, I am here for a business trip.',
+    'I am visiting family. Here is their address.',
+    'Can I help you?',
+    'Is there something I can do for you?',
   ];
 
-  // Context-specific lines (50% of openings)
-  const contextLines = card.ground_truth.type === 'innocent'
-    ? [
-        `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`,
-        `Excuse me, can I help you? ${plural}'re just trying to catch our flight.`,
-        `Is there something wrong? We have a connection to make.`,
-        `Sorry, are we in the way? We're trying to get to our gate.`,
-      ]
-    : [
-        `Hello. ${plural}'re just heading to our gate… is everything okay?`,
-        `Good morning. We have a flight to catch.`,
-        `We're just trying to get through. Is there a problem?`,
-        `(quietly) Can we please just go? We don't want any trouble.`,
-      ];
-
-  // 50% chance of simple greeting, 50% chance of context line
-  if (Math.random() < 0.5) {
-    return simpleGreetings[Math.floor(Math.random() * simpleGreetings.length)];
-  }
-  return contextLines[Math.floor(Math.random() * contextLines.length)];
+  return openingLines[Math.floor(Math.random() * openingLines.length)];
 }
 
 function getOpenReply(card: ScenarioCard, turn: number): string {
