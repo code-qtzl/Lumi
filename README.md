@@ -74,13 +74,12 @@ Pick a scenario  →  Interview the traveler  →  Make a decision  →  See you
 |---|---|---|
 | `GET` | `/api/scenarios` | List all scenarios |
 | `GET` | `/api/scenarios/:id` | Trainee-safe view (no ground truth) |
-| `GET` | `/api/scenarios/:id/reveal` | Full card with reveal — debrief only |
-| `POST` | `/api/scenarios` | Create a scenario (Zod validated) |
-| `POST` | `/api/auth/token` | Mint a JWT `{ trainee_id }` |
+| `POST` | `/api/scenarios` | Create a scenario (validated against the shared contract) |
 | `POST` | `/api/sessions` | Start a session; traveler speaks first |
 | `POST` | `/api/sessions/:id/turn` | Submit a turn, get traveler reply |
 | `POST` | `/api/sessions/:id/end` | Commit decision, get transcript |
 | `GET` | `/api/sessions/:id/transcript` | Fetch completed transcript |
+| `GET` | `/api/sessions/:id/reveal` | Full card + reveal — completed sessions only |
 | `GET` | `/api/sessions/:id` | Session view or transcript |
 | `POST` | `/api/sessions/:id/feedback` | Score session → FeedbackReport |
 | `GET` | `/api/sessions/:id/feedback` | Retrieve cached report |
@@ -98,8 +97,6 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 | `OPENAI_API_KEY` | — | Enables GPT traveler. Priority over Gemini. |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use |
 | `GEMINI_API_KEY` | — | Enables Gemini traveler (fallback to OpenAI) |
-| `JWT_SECRET` | — | Enables JWT auth. Leave blank for open dev mode. |
-| `JWT_EXPIRY` | `8h` | Token lifetime |
 | `ALLOWED_ORIGIN` | `*` | CORS origin (set to your frontend URL in prod) |
 | `RATE_LIMIT_MAX` | `20` | Max session creations per IP per minute |
 
@@ -120,12 +117,11 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 │       ├── contracts.ts           # Shared TypeScript types
 │       ├── app.ts                 # Express app (middleware + routes)
 │       ├── server.ts              # Entry point (listen)
-│       ├── routes/                # scenarios, sessions, feedback, auth, traces
+│       ├── routes/                # scenarios, sessions, feedback, traces
 │       ├── session/               # Engine, store, types
 │       ├── traveler/              # OpenAI / Gemini / fixture engines
 │       ├── eval/                  # Rubric scorer + harness
 │       ├── feedback/              # Feedback report store
-│       ├── middleware/            # JWT auth
 │       ├── scenarios/             # Scenario card registry
 │       └── tracing/               # Session event tracer
 │
@@ -151,7 +147,7 @@ npm run typecheck
 |---|---|---|
 | 1 | **Feedback endpoint** — scores session against 5 rubric dimensions, idempotent, cached | `routes/feedback.ts`, `feedback/store.ts` |
 | 2 | **Transcript GET** — dedicated endpoint for completed session transcripts | `routes/sessions.ts` |
-| 3 | **JWT auth** — optional token-based auth, transparent in dev | `middleware/auth.ts`, `routes/auth.ts` |
+| 3 | **Auth removed for v1** — PRD out-of-scope #4 (single local user) | — |
 | 4 | **CORS lockdown** — `ALLOWED_ORIGIN` env var | `app.ts` |
 | 5 | **Rate limiting** — `express-rate-limit` on session creation | `app.ts` |
 | 6 | **Session persistence** — write-through JSON file; sessions survive restarts | `session/store.ts` |

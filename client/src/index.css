@@ -3,7 +3,11 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  /* Lumi is a dark-themed app: every surface color in App.css assumes dark
+     backgrounds. Pin the scheme so an OS in light mode can't flip the base
+     text color to dark navy — that rendered dark-on-dark on all cards and
+     bubbles for anything relying on inherited color. */
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
 
@@ -54,15 +58,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* (Vite's prefers-color-scheme:light override removed on purpose — see the
+   color-scheme note in :root. A real light theme means re-tokenizing App.css,
+   not flipping the root under a dark-only palette.) */

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v7",
+	"title": "Stepmother and teen, route change",
+	"difficulty": 3,
+	"persona": {
+		"name": "Taylor",
+		"traveling_with": "her stepmother",
+		"backstory": "Taylor (15) is traveling with her stepmother to visit her father. Their route has changed due to weather; both are anxious and hungry. Taylor is listening to music and gives brief answers because she's a tired teenager, not because anything is wrong."
+	},
+	"role_play_instructions": "Respond briefly, seeming uninterested. If the trainee is empathetic and asks about your travel ('How's the trip been so far?'), open up and chat. If the trainee is abrupt or separates you from your stepmother aggressively, become guarded and less cooperative — an innocent teen may appear 'evasive'.",
+	"emotional_presentation": {
+		"label": "chatty/oblivious",
+		"voice_direction": "Initially detached, then talkative if treated kindly; tone becomes guarded if pressed."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Nothing was wrong. Taylor is a tired 15-year-old traveling with her stepmother. Brief answers and music-listening were ordinary teenage behavior, not indicators of anything amiss.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

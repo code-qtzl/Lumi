@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../app';
-import { __resetForTesting } from './scenarios';
+import { __resetForTesting } from '../scenarios/registry';
 
+// Registry seeds from shared/contracts/examples: the two parent archetypes
+// (AC4: both must be playable) plus any generated variants (*.gen.json).
 const SEED_ID = 'father-daughter-holiday';
+async function poolSize(): Promise<number> {
+	const res = await request(app).get('/api/scenarios');
+	return (res.body as unknown[]).length;
+}
 
 const VALID_NEW_SCENARIO = {
 	scenario_id: 'new-scenario',
@@ -25,15 +31,18 @@ beforeEach(__resetForTesting);
 // ── GET /scenarios ────────────────────────────────────────────────────────────
 
 describe('GET /scenarios', () => {
-	it('returns 200 with the seeded list', async () => {
+	it('returns 200 with both parent archetypes present (AC4)', async () => {
 		const res = await request(app).get('/api/scenarios');
 		expect(res.status).toBe(200);
-		expect(res.body).toHaveLength(1);
+		expect(res.body.length).toBeGreaterThanOrEqual(2);
+		const ids = res.body.map((s: { scenario_id: string }) => s.scenario_id);
+		expect(ids).toContain('father-daughter-holiday');
+		expect(ids).toContain('coached-companion');
 	});
 
 	it('list items only contain scenario_id, title, and difficulty', async () => {
 		const res = await request(app).get('/api/scenarios');
-		const item = res.body[0];
+		const item = res.body.find((s: { scenario_id: string }) => s.scenario_id === SEED_ID);
 		expect(item).toMatchObject({ scenario_id: SEED_ID, title: expect.any(String), difficulty: 1 });
 		// must NOT leak sensitive fields
 		expect(item).not.toHaveProperty('ground_truth');
@@ -73,22 +82,32 @@ describe('GET /scenarios/:id', () => {
 	});
 });
 
-// ── GET /scenarios/:id/reveal ─────────────────────────────────────────────────
+// ── No public reveal ──────────────────────────────────────────────────────────
 
-describe('GET /scenarios/:id/reveal', () => {
-	it('returns 200 with the full scenario card', async () => {
+describe('scenario reveal is not publicly reachable', () => {
+	it('GET /scenarios/:id/reveal no longer exists (ground truth stays hidden mid-session)', async () => {
 		const res = await request(app).get(`/api/scenarios/${SEED_ID}/reveal`);
-		expect(res.status).toBe(200);
-		expect(res.body).toHaveProperty('ground_truth');
-		expect(res.body).toHaveProperty('reveal');
-		expect(res.body).toHaveProperty('role_play_instructions');
-		expect(res.body.persona).toHaveProperty('backstory');
+		expect(res.status).toBe(404);
+	});
+});
+
+// ── Authored scenarios are playable (single store) ────────────────────────────
+
+describe('authored scenario → session (registry is the one store)', () => {
+	it('a scenario created via POST /scenarios can immediately start a session', async () => {
+		await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
+		const res = await request(app)
+			.post('/api/sessions')
+			.send({ scenario_id: 'new-scenario' });
+		expect(res.status).toBe(201);
+		expect(res.body.scenario_id).toBe('new-scenario');
 	});
 
-	it('returns 404 for an unknown id', async () => {
-		const res = await request(app).get('/api/scenarios/does-not-exist/reveal');
-		expect(res.status).toBe(404);
-		expect(res.body).toHaveProperty('error');
+	it('the shipped trafficking archetype can start a session (AC4 regression)', async () => {
+		const res = await request(app)
+			.post('/api/sessions')
+			.send({ scenario_id: 'coached-companion' });
+		expect(res.status).toBe(201);
 	});
 });
 
@@ -107,10 +126,20 @@ describe('POST /scenarios', () => {
 	});
 
 	it('persists the scenario so it appears in GET /scenarios', async () => {
+		const before = await poolSize();
 		await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
 		const res = await request(app).get('/api/scenarios');
-		expect(res.body).toHaveLength(2);
+		expect(res.body).toHaveLength(before + 1);
 		expect(res.body.map((s: { scenario_id: string }) => s.scenario_id)).toContain('new-scenario');
+	});
+
+	it('returns 400 for indicators not in the shared catalog', async () => {
+		const res = await request(app)
+			.post('/api/scenarios')
+			.send({ ...VALID_NEW_SCENARIO, ground_truth: { type: 'trafficking', indicators_present: ['made-up-indicator'] } });
+		expect(res.status).toBe(400);
+		const fields = res.body.details.map((d: { field: string }) => d.field);
+		expect(fields).toContain('ground_truth.indicators_present');
 	});
 
 	it('returns 400 with field-level details when scenario_id is invalid', async () => {
@@ -168,9 +197,10 @@ describe('DELETE /scenarios/:id', () => {
 	});
 
 	it('removes the scenario from the list', async () => {
+		const before = await poolSize();
 		await request(app).delete(`/api/scenarios/${SEED_ID}`);
 		const res = await request(app).get('/api/scenarios');
-		expect(res.body).toHaveLength(0);
+		expect(res.body).toHaveLength(before - 1);
 	});
 
 	it('returns 404 for an unknown id', async () => {

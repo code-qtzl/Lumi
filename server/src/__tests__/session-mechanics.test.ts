@@ -185,6 +185,44 @@ describe('Session Mechanics', () => {
     });
   });
 
+  describe('transcript immutability (decision seals the record)', () => {
+    it('drops an LLM reply that resolves after the session ended', async () => {
+      // Slow traveler: reply resolves only when we release it
+      let release!: () => void;
+      const gate = new Promise<void>(resolve => { release = resolve; });
+      setTraveler({
+        name: 'slow-fake',
+        reply: async (card, turns) => {
+          if (turns.length === 0) return [{ role: 'traveler', text: 'Opening.' }];
+          await gate;
+          return [{ role: 'traveler', text: 'Late reply.' }];
+        },
+      });
+
+      try {
+        const session = await createSession(testCard, 'text');
+        const pending = submitTurn(session.session_id, 'Question?'); // in flight
+        const ended = endSession(session.session_id, 'no_action');
+        expect('error' in ended).toBe(false);
+        if ('error' in ended) return;
+        const sealedCount = ended.transcript.turns.length;
+
+        release();
+        const result = await pending;
+        expect('error' in result).toBe(false);
+        if ('error' in result) return;
+        expect(result.traveler_turns).toHaveLength(0); // stale reply dropped
+
+        const transcript = getTranscript(session.session_id);
+        if ('error' in transcript) throw new Error('expected transcript');
+        expect(transcript.turns.length).toBe(sealedCount); // record unchanged
+        expect(transcript.turns.some(t => t.text === 'Late reply.')).toBe(false);
+      } finally {
+        setTraveler(fixtureTraveler);
+      }
+    });
+  });
+
   describe('getTranscript', () => {
     it('refuses a transcript for an active session (no fabricated decision)', async () => {
       const session = await createSession(testCard, 'text');

@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v9",
+	"title": "Young adult with cousin, scripted responses",
+	"difficulty": 1,
+	"persona": {
+		"name": "Julian",
+		"traveling_with": "a cousin",
+		"backstory": "Julian (20) is being trafficked by a cousin who has manipulated him into believing they are on a vacation. Julian has been coached to recite a story about 'visiting relatives' and to defer to his cousin for any details. Julian does not know the address where they will be staying and his cousin holds both passports."
+	},
+	"role_play_instructions": "Recite a rehearsed story about 'relatives' and 'family gatherings'. When asked about specifics, defer to your cousin and claim they know the details. If the trainee is patient and empathetic, allow subtle inconsistencies to emerge in your story. If the trainee is aggressive or confrontational, retreat into your scripted responses and provide brief, monotone answers.",
+	"emotional_presentation": {
+		"label": "coached",
+		"voice_direction": "Deliver scripted lines in a flat, detached tone, with a hint of uncertainty when deviating from the script."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Julian was being trafficked by his cousin, who controlled both passports and coached Julian's story to avoid suspicion. The cousin manipulated Julian into believing they were on a legitimate vacation.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

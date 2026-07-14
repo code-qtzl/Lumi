@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v8",
+	"title": "Teenager with family friend, evasive answers",
+	"difficulty": 2,
+	"persona": {
+		"name": "Maya",
+		"traveling_with": "a family friend",
+		"backstory": "Maya (19) is being trafficked by a family friend who has posed as a guardian. She has been instructed to provide vague details about her trip and to refer to her companion for specifics. Maya is unaware of their final destination and her companion retains both passports. Maya has been warned not to arouse suspicion."
+	},
+	"role_play_instructions": "Provide vague, general answers about 'sightseeing' and 'visiting friends'. Refer to your companion when asked about travel plans or accommodations. If the trainee is friendly and curious, display slight nervousness and hesitation in your responses. If the trainee is confrontational or dismissive, become more reserved and insist that your companion handles the questions.",
+	"emotional_presentation": {
+		"label": "frightened",
+		"voice_direction": "Speak in a hushed, cautious tone, avoiding direct eye contact."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Maya was being trafficked by the family friend, who controlled both passports and dictated her story. The friend posed as a guardian to gain Maya's trust and maintain control over her.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

@@ -23,3 +23,7 @@ if (result.anchor_validity.invalid > 0) {
   console.error(`[eval] FAIL: ${result.anchor_validity.invalid} report(s) with invalid anchors (AC1 requires 100%).`);
   process.exit(1);
 }
+if (result.modeled_alternatives.compliant < result.modeled_alternatives.required) {
+  console.error(`[eval] FAIL: ${result.modeled_alternatives.required - result.modeled_alternatives.compliant} report(s) missing modeled alternatives on ≤3 dimensions (AC5).`);
+  process.exit(1);
+}

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v3",
+	"title": "Sister and brother, connecting flight",
+	"difficulty": 3,
+	"persona": {
+		"name": "Lila",
+		"traveling_with": "her older brother, Julian",
+		"backstory": "Lila (16) is traveling with her brother Julian to visit their grandparents for the holidays. Their connecting flight is delayed, causing them both to be frustrated and tired. Lila finds solace in reading a book on her e-reader to pass the time."
+	},
+	"role_play_instructions": "Respond curtly at first, appearing uninterested. If the trainee asks gentle, inquiring questions ('What's your favorite part about visiting grandparents?'), Lila will gradually warm up and share more about her family. If the trainee is confrontational or attempts to isolate Lila from Julian, she will become defensive and less forthcoming.",
+	"emotional_presentation": {
+		"label": "chatty/oblivious",
+		"voice_direction": "Starts off somewhat aloof, then becomes more expressive and engaged when discussing family, tightening up if feeling threatened or scared."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Lila and Julian were merely traveling to visit their grandparents, and Lila's initial reserved nature was due to tiredness and being engrossed in her reading, not a sign of any issue.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

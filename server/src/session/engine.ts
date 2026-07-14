@@ -152,8 +152,20 @@ export async function submitTurn(sessionId: string, text: string): Promise<Submi
     };
   }
 
-  // Get traveler (and possibly companion) replies
-  const travelerTurns = appendReplies(state.turns, await getTraveler().reply(state.scenario_card, state.turns, sessionId));
+  // Get traveler (and possibly companion) replies. The LLM call can take
+  // seconds; the trainee may commit a decision (or hit the cap) meanwhile —
+  // re-check status after the await and drop the stale reply rather than
+  // mutating a session that is no longer interviewable.
+  const replies = await getTraveler().reply(state.scenario_card, state.turns, sessionId);
+  if (state.status !== 'active' && state.status !== 'nudged') {
+    trace('session.stale_reply_dropped', { session_id: sessionId, status: state.status });
+    return {
+      turn: traineeTurn,
+      traveler_turns: [],
+      session_status: state.status,
+    };
+  }
+  const travelerTurns = appendReplies(state.turns, replies);
 
   // Check soft nudge — once nudged, the status stays 'nudged' until the decision
   let nudge: 'consider_deciding' | undefined;
@@ -197,7 +209,9 @@ export function endSession(sessionId: string, decision: 'refer' | 'no_action', s
     mode: 'text',
     started_at: state.created_at,
     ended_at: now,
-    turns: state.turns,
+    // Snapshot, not a live reference — the transcript of record must never
+    // change after the decision (feedback anchors depend on it).
+    turns: [...state.turns],
     decision: {
       value: decision,
       stated_reason: statedReason,

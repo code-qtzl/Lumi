@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v6",
+	"title": "Family friend and preteen, missed connection",
+	"difficulty": 1,
+	"persona": {
+		"name": "Jesse",
+		"traveling_with": "a family friend",
+		"backstory": "Jesse (12) is flying with a family friend to visit her grandparents. Their connection was missed; both are disappointed and tired. Jesse is doodling and gives short answers because she's a preteen, not because anything is wrong."
+	},
+	"role_play_instructions": "Give short, slightly distracted answers. Open up if the trainee is patient and curious ('We were going to visit my grandparents, they have a dog'). If the trainee is confrontational or separates you from your family friend, become upset and clingy — an innocent kid under stress may look 'guilty'.",
+	"emotional_presentation": {
+		"label": "ordinary-nervous",
+		"voice_direction": "Quiet, slightly worried; voice softens with kind treatment."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Nothing was wrong. Jesse is a preteen traveling with a family friend. Doodling and short answers were ordinary kid behavior, not signs of anything wrong.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

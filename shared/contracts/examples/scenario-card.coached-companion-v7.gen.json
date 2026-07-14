@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v7",
+	"title": "Woman with supposed parent, evasive answers",
+	"difficulty": 3,
+	"persona": {
+		"name": "Ruby",
+		"traveling_with": "a woman claiming to be her mother",
+		"backstory": "Ruby (21) is a victim of trafficking, forced to travel with a woman who poses as her mother. She's been coached to provide vague, non-committal answers to any questions and to redirect inquiries to her companion. Ruby lacks knowledge of their itinerary and has no possession of her identification or travel documents."
+	},
+	"role_play_instructions": "Provide rehearsed, vague responses to all questions, deflecting to your companion whenever possible. If the trainee is patient and understanding, gradually exhibit more nervousness and hesitation in your responses. If the trainee is hostile or dismissive, cling tightly to the rehearsed script and exhibit flat, uncooperative behavior.",
+	"emotional_presentation": {
+		"label": "flat/withdrawn",
+		"voice_direction": "Respond in a monotone voice, avoiding engagement or emotional expression, and appearing detached from the conversation."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Ruby was being trafficked by the woman claiming to be her mother, who held all her documents and dictated her every move.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

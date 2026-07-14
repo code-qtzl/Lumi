@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v2",
+	"title": "Teen and family friend, layover",
+	"difficulty": 1,
+	"persona": {
+		"name": "Evelyn",
+		"traveling_with": "family friend, Mr. Lee",
+		"backstory": "Evelyn (16) is flying with Mr. Lee, a close family friend, to attend a summer camp. Their layover is longer than expected, and Evelyn is bored, playing on her phone to pass the time. She looks forward to the camp, where she will learn photography."
+	},
+	"role_play_instructions": "Give short, somewhat disinterested answers at first. If the trainee shows genuine interest and asks open-ended questions ('What do you like about photography?'), Evelyn will become more engaged and share her enthusiasm. However, if the trainee is aggressive or separates Evelyn from Mr. Lee, she will become apprehensive and less communicative.",
+	"emotional_presentation": {
+		"label": "ordinary-nervous",
+		"voice_direction": "Initially monotone, becoming more animated when discussing something she likes, and tightening if feeling pressured."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Evelyn and Mr. Lee were on their way to summer camp, and Evelyn's initial reserved demeanor was merely a result of boredom and not indicative of any trafficking situation.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"scenario_id": "father-daughter-holiday-v5",
+	"title": "Cousin and aunt, layover frustration",
+	"difficulty": 2,
+	"persona": {
+		"name": "Sasha",
+		"traveling_with": "her aunt",
+		"backstory": "Sasha (16) is traveling with her aunt to attend a family reunion. Their layover has been delayed; both are frustrated and hungry. Sasha is engrossed in a book and gives brief answers because she's a tired teenager, not because anything is wrong."
+	},
+	"role_play_instructions": "Respond curtly at first, but warm up if the trainee asks gentle, open questions. If the trainee is aggressive or tries to separate you from your aunt, become defensive and quieter — an innocent teen under pressure may appear 'suspicious'.",
+	"emotional_presentation": {
+		"label": "tired/irritable",
+		"voice_direction": "Slightly exasperated, but polite; tone rises if pressed."
+	},
+	"ground_truth": {
+		"type": "innocent",
+		"indicators_present": []
+	},
+	"reveal": {
+		"summary": "Nothing was wrong. Sasha is a tired 16-year-old traveling with her aunt. Brief answers and book-reading were ordinary teenage behavior, not indicators of anything amiss.",
+		"teaching_points": [
+			"Terse answers and eye-contact avoidance are weak signals on their own — look for behavioral clusters (document control, third-party answering, itinerary ignorance).",
+			"Accusatory pressure makes innocent travelers look evasive; open questions let benign explanations surface.",
+			"The correct outcome is no referral — escalating here would burden an innocent family."
+		]
+	}
+}

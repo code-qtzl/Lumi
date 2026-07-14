@@ -112,10 +112,10 @@ describe('POST /api/sessions', () => {
     expect(res.body.opening_turns[0].role).toBe('traveler');
   });
 
-  it('returns 400 when scenario_id is missing', async () => {
+  it('assigns a hidden random scenario when scenario_id is omitted', async () => {
     const res = await request(app).post('/api/sessions').send({});
-    expect(res.status).toBe(400);
-    expect(res.body).toHaveProperty('error');
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('scenario_id');
   });
 
   it('returns 404 for an unknown scenario_id', async () => {
@@ -253,5 +253,117 @@ describe('POST /api/sessions/:id/end', () => {
       .post(`/api/sessions/${session_id}/end`)
       .send({ decision: 'refer' });
     expect(res.status).toBe(409);
+  });
+});
+
+// ── GET /api/sessions/:id/reveal (the only reveal path) ──────────────────────
+
+describe('GET /api/sessions/:id/reveal', () => {
+  it('409s while the session is active — ground truth stays hidden', async () => {
+    const { session_id } = await startSession();
+    const res = await request(app).get(`/api/sessions/${session_id}/reveal`);
+    expect(res.status).toBe(409);
+    expect(JSON.stringify(res.body)).not.toContain('ground_truth');
+  });
+
+  it('returns the full card (ground truth, reveal) once completed', async () => {
+    const id = await completedSession('no_action');
+    const res = await request(app).get(`/api/sessions/${id}/reveal`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('ground_truth');
+    expect(res.body).toHaveProperty('reveal');
+    expect(res.body.persona).toHaveProperty('backstory');
+  });
+
+  it('404s for an unknown session', async () => {
+    const res = await request(app).get('/api/sessions/sess-nope/reveal');
+    expect(res.status).toBe(404);
+  });
+});
+
+// ── Robustness: malformed bodies must never kill the process ─────────────────
+
+describe('malformed request bodies', () => {
+  it('POST /api/sessions with a non-JSON body must not kill the process', async () => {
+    const res = await request(app)
+      .post('/api/sessions')
+      .set('Content-Type', 'text/plain')
+      .send('not json');
+    // Unparsed body = no scenario_id = blind random assignment
+    expect(res.status).toBe(201);
+    // Server is still alive and serving
+    const alive = await request(app).get('/api/scenarios');
+    expect(alive.status).toBe(200);
+  });
+
+  it('POST /:id/turn and /:id/end with empty bodies return 400', async () => {
+    const { session_id } = await startSession();
+    const turn = await request(app).post(`/api/sessions/${session_id}/turn`).send();
+    expect(turn.status).toBe(400);
+    const end = await request(app).post(`/api/sessions/${session_id}/end`).send();
+    expect(end.status).toBe(400);
+  });
+
+  it('rejects a non-string stated_reason (transcript contract)', async () => {
+    const { session_id } = await startSession();
+    const res = await request(app)
+      .post(`/api/sessions/${session_id}/end`)
+      .send({ decision: 'refer', stated_reason: { nested: true } });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an invalid mode', async () => {
+    const res = await request(app)
+      .post('/api/sessions')
+      .send({ scenario_id: 'father-daughter-holiday', mode: 'banana' });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Rate limiting actually applies to session creation ───────────────────────
+
+describe('session-create rate limit', () => {
+  it('kicks in before the router when NODE_ENV is not test', async () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development'; // limiter skip() reads this per request
+    try {
+      let limited = false;
+      for (let i = 0; i < 25; i++) {
+        const res = await request(app)
+          .post('/api/sessions')
+          .send({ scenario_id: 'father-daughter-holiday' });
+        if (res.status === 429) { limited = true; break; }
+      }
+      expect(limited).toBe(true);
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
+  });
+});
+
+// ── Blind scenario assignment (trainee never sees/picks the scenario) ────────
+
+describe('hidden scenario assignment', () => {
+  it('POST /api/sessions with no scenario_id assigns one at random and hides it', async () => {
+    const res = await request(app).post('/api/sessions').send({});
+    expect(res.status).toBe(201);
+    expect(res.body.session_id).toBeDefined();
+    expect(res.body.traveler_name).toBeDefined();
+    expect(res.body).not.toHaveProperty('scenario_id');
+  });
+
+  it('mid-session view does not expose the scenario id', async () => {
+    const created = await request(app).post('/api/sessions').send({});
+    const res = await request(app).get(`/api/sessions/${created.body.session_id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.session).not.toHaveProperty('scenario_id');
+  });
+
+  it('explicit scenario_id (dev/probes) still works and echoes the id', async () => {
+    const res = await request(app)
+      .post('/api/sessions')
+      .send({ scenario_id: 'coached-companion' });
+    expect(res.status).toBe(201);
+    expect(res.body.scenario_id).toBe('coached-companion');
   });
 });

@@ -1,0 +1,32 @@
+{
+	"scenario_id": "coached-companion-v5",
+	"title": "Young woman with family friend, rehearsed story",
+	"difficulty": 2,
+	"persona": {
+		"name": "Ava",
+		"traveling_with": "a family friend",
+		"backstory": "Ava (20) is being trafficked by a woman posing as her aunt. She has been told to say she's on a vacation and to let her companion handle any questions. Ava doesn't know where they're headed or what their plans are, and her companion has all their documents."
+	},
+	"role_play_instructions": "Stick to the story about a vacation when asked open-ended questions. If the trainee is pushy or direct, become vague and refer them to your companion. If the trainee seems genuinely concerned, show slight cracks in your rehearsed responses — pause, correct yourself, or seem uncertain.",
+	"emotional_presentation": {
+		"label": "coached",
+		"voice_direction": "Deliver scripted lines with an air of certainty, but betray hesitation with body language when probed deeper."
+	},
+	"ground_truth": {
+		"type": "trafficking",
+		"indicators_present": [
+			"scripted-story",
+			"third-party-answers",
+			"no-itinerary-knowledge",
+			"documents-held-by-other"
+		]
+	},
+	"reveal": {
+		"summary": "Ava was being trafficked by the woman posing as her aunt, who controlled all their documents and dictated their story.",
+		"teaching_points": [
+			"Scripted consistency plus deference to a companion is a behavioral cluster — each signal alone is weak, together they warrant referral.",
+			"Open, patient questions gave Elena room to go off-script; accusatory pressure pushed her back into the rehearsed story.",
+			"Refer, don't accuse: the correct action is referral through protocol, not confronting the companion or the traveler."
+		]
+	}
+}

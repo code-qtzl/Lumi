@@ -25,5 +25,8 @@ jobs:
         run: cd server && npm test
       - name: Eval harness (anchor validity gate)
         run: cd server && npm run eval
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Validate shared contracts
-        run: cd shared/contracts && python validate.py
+        run: pip install jsonschema && cd shared/contracts && python validate.py

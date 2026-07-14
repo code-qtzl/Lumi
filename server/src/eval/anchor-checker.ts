@@ -41,6 +41,17 @@ export function checkAnchorValidity(report: FeedbackReport, transcript: Transcri
     }
   }
 
+  // Modeled alternatives are claims too — their flagged turns must exist (AC1/AC5)
+  for (const alt of report.modeled_alternatives ?? []) {
+    if (!validTurnIds.has(alt.turn_id)) {
+      issues.push({
+        dimension_id: '(modeled_alternative)',
+        invalid_anchors: [alt.turn_id],
+        message: `Modeled alternative references unknown turn: ${alt.turn_id}`,
+      });
+    }
+  }
+
   return {
     valid: issues.length === 0,
     issues,

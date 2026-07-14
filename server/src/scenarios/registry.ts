@@ -52,12 +52,35 @@ export function getScenarioCard(scenarioId: string): ScenarioCard | undefined {
 }
 
 /**
- * List all available scenario IDs and titles.
+ * List all available scenarios (trainee-safe summary fields only).
  */
-export function listScenarios(): Array<{ scenario_id: string; title: string }> {
+export function listScenarios(): Array<{ scenario_id: string; title: string; difficulty?: number }> {
   if (loadedCards.size === 0) loadScenarioCards();
   return Array.from(loadedCards.entries()).map(([id, card]) => ({
     scenario_id: id,
     title: card.title,
+    difficulty: card.difficulty,
   }));
+}
+
+/**
+ * Add a card at runtime (authoring/CRUD). Caller is responsible for
+ * validating against shared/contracts/scenario-card.schema.json first.
+ * The registry is the ONLY scenario store — sessions and CRUD share it.
+ */
+export function addScenarioCard(card: ScenarioCard): void {
+  if (loadedCards.size === 0) loadScenarioCards();
+  loadedCards.set(card.scenario_id, card);
+}
+
+/** Remove a card at runtime. Returns false if it didn't exist. */
+export function deleteScenarioCard(scenarioId: string): boolean {
+  if (loadedCards.size === 0) loadScenarioCards();
+  return loadedCards.delete(scenarioId);
+}
+
+/** Reset to the on-disk example cards. Call in test beforeEach. */
+export function __resetForTesting(): void {
+  loadedCards.clear();
+  loadScenarioCards();
 }

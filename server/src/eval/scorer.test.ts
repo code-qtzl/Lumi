@@ -241,3 +241,36 @@ describe('scoreSession — report shape', () => {
     expect(report.summary.length).toBeGreaterThan(0);
   });
 });
+
+// ── modeled alternatives (AC5) ────────────────────────────────────────────────
+
+describe('modeled alternatives (AC5)', () => {
+  it('every dimension scored ≤3 carries at least one alternative tied to a real trainee turn', () => {
+    // Accusatory, low-effort session → several low dimensions
+    const t = transcript(
+      turns([
+        { role: 'traveler', text: 'Hi.' },
+        { role: 'trainee', text: 'Tell me the truth. Are you sure?' },
+        { role: 'traveler', text: 'We are fine.' },
+      ]),
+      'refer', // false positive on innocent
+    );
+    const report = scoreSession(t, innocentCard, rubric);
+    const lowDims = report.dimensions.filter(d => d.score <= 3);
+    expect(lowDims.length).toBeGreaterThan(0);
+    expect(report.modeled_alternatives!.length).toBeGreaterThanOrEqual(lowDims.length);
+
+    const traineeIds = new Set(t.turns.filter(x => x.role === 'trainee').map(x => x.turn_id));
+    for (const alt of report.modeled_alternatives!) {
+      expect(traineeIds.has(alt.turn_id)).toBe(true);
+      expect(alt.suggested_question.length).toBeGreaterThan(0);
+      expect(alt.why.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('emits no alternatives when there are no trainee turns', () => {
+    const t = transcript(turns([{ role: 'traveler', text: 'Hi.' }]));
+    const report = scoreSession(t, innocentCard, rubric);
+    expect(report.modeled_alternatives).toEqual([]);
+  });
+});

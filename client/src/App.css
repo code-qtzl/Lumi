@@ -451,3 +451,93 @@ button:hover {
 	color: #777;
 	font-style: italic;
 }
+
+/* ── Debrief anchors + transcript (F5: claims link to moments) ── */
+.rubric-anchors {
+	margin: 6px 0 0;
+	font-size: 0.78rem;
+	color: #888;
+}
+.anchor-chip {
+	display: inline-block;
+	margin: 0 4px 2px 0;
+	padding: 1px 8px;
+	font-size: 0.75rem;
+	border: 1px solid #3a4a63;
+	border-radius: 10px;
+	background: transparent;
+	color: #9db2d0;
+	cursor: pointer;
+}
+.anchor-chip:hover {
+	background: #22304a;
+}
+.transcript-section {
+	margin-top: 24px;
+}
+.transcript-turn {
+	display: flex;
+	gap: 10px;
+	padding: 6px 8px;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	border-radius: 6px;
+}
+.transcript-turn:target {
+	background: #2b3a55;
+}
+.transcript-turn-id {
+	color: #8a8aa0; /* >=4.5:1 on the dark base; #667 was 2.8:1 */
+	font-family: monospace;
+	flex: 0 0 40px;
+}
+.transcript-role {
+	color: #9db2d0;
+	flex: 0 0 90px;
+	font-weight: 600;
+}
+.transcript-trainee .transcript-role {
+	color: #d0b89d;
+}
+.transcript-text {
+	flex: 1;
+}
+
+/* ── Blind start panel (trainee never sees scenarios) ── */
+.start-panel {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 14px;
+}
+.start-blurb {
+	margin: 6px 0 0;
+	color: #aaa;
+	font-size: 0.9rem;
+	line-height: 1.6;
+	max-width: 46ch;
+}
+
+/* ── Modeled alternatives (AC5) ── */
+.alternatives-section {
+	margin-top: 24px;
+}
+.alternatives-section h2 {
+	color: #e2e8f0;
+}
+.alternative-row {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	padding: 8px 0;
+}
+.alternative-question {
+	margin: 0;
+	color: #d6e4f7;
+	font-size: 0.9rem;
+}
+.alternative-why {
+	margin: 4px 0 0;
+	color: #999;
+	font-size: 0.82rem;
+	line-height: 1.5;
+}

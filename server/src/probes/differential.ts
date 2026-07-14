@@ -20,7 +20,18 @@ import * as path from 'path';
 import { createSession, submitTurn, endSession } from '../session/engine';
 import { loadScenarioCards, getScenarioCard } from '../scenarios/registry';
 import { PROMPT_VERSION } from '../traveler/prompt';
+import { llmStats, resetLlmStats } from '../traveler/llm-shared';
 import { Transcript } from '../contracts';
+
+// Pace turns to fit free-tier limits. Groq's binding constraint is TOKENS per
+// minute (12k TPM on llama-3.3-70b): each call re-sends the system prompt +
+// full history, ~1.5k tokens by late-session, so ~8 calls/min max → 12s/turn
+// leaves headroom for guard retries. Gemini's constraint is requests/min.
+// Live sessions never hit this — human typing cadence is far slower.
+// Override with PROBE_TURN_DELAY_MS (0 = no pacing, for paid tiers).
+const DEFAULT_DELAY_MS = process.env.GROQ_API_KEY ? 12_000 : 7000;
+const TURN_DELAY_MS = Number(process.env.PROBE_TURN_DELAY_MS ?? DEFAULT_DELAY_MS);
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const OPEN_SCRIPT = [
   'Good afternoon — no rush at all. How has the trip been so far?',
@@ -50,6 +61,7 @@ async function runScripted(scenarioId: string, script: string[], label: string):
 
   const session = await createSession(card, 'text');
   for (const q of script) {
+    await sleep(TURN_DELAY_MS);
     const result = await submitTurn(session.session_id, q);
     if ('error' in result) throw new Error(`${label}: ${result.error}`);
   }
@@ -72,8 +84,8 @@ function printTranscript(t: Transcript, label: string): void {
 }
 
 async function main(): Promise<void> {
-  if (!process.env.GEMINI_API_KEY) {
-    console.error('GEMINI_API_KEY is not set — the probe needs the real traveler (fixture behavior is hardcoded, probing it is meaningless).');
+  if (!process.env.GROQ_API_KEY && !process.env.TRAVELER_API_KEY && !process.env.GEMINI_API_KEY) {
+    console.error('No LLM key set (GROQ_API_KEY / TRAVELER_API_KEY+TRAVELER_API_BASE / GEMINI_API_KEY) — the probe needs the real traveler (fixture behavior is hardcoded, probing it is meaningless).');
     process.exit(1);
   }
 
@@ -83,6 +95,7 @@ async function main(): Promise<void> {
 
   const archetypes = ['coached-companion', 'father-daughter-holiday'];
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  resetLlmStats();
 
   for (const scenarioId of archetypes) {
     console.log(`\n════ Archetype: ${scenarioId} · prompt ${PROMPT_VERSION} ════`);
@@ -100,6 +113,12 @@ async function main(): Promise<void> {
     const outPath = path.join(outDir, `probe-${scenarioId}-${stamp}.json`);
     fs.writeFileSync(outPath, JSON.stringify({ prompt_version: PROMPT_VERSION, open, accusatory }, null, 2));
     console.log(`  Saved: ${outPath}`);
+  }
+
+  console.log(`\nLLM stats: ${JSON.stringify(llmStats)}`);
+  if (llmStats.fallbacks > 0) {
+    console.error(`\n[probe] INVALID: ${llmStats.fallbacks} turn(s) silently fell back to the fixture — these transcripts do NOT reflect the real traveler. Check .traces/trace-*.jsonl (http_status per call) and rerun.`);
+    process.exit(1);
   }
 
   console.log('\nPost both transcript pairs to Slack for the team vote (roadmap: "post 2–3 transcripts, everyone reads and votes").');
