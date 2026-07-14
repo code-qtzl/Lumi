@@ -1,6 +1,6 @@
 # Lumi — Training Simulator
 
-An AI-powered training simulator for frontline professionals to practice recognising human trafficking behavioral indicators through role-play scenarios. Built for the **Call for Code AI Hackathon**.
+An AI-powered training simulator for frontline professionals to practice recognising human trafficking behavioral indicators through role-play scenarios. Built for the [**Call for Code AI Hackathon**](https://hackathon.austinaihub.org/#workshop-resources).
 
 A trainee conducts a text interview with an AI-played traveler persona. When ready, they commit a **refer** or **no action** decision and receive a scored debrief across 5 rubric dimensions.
 
@@ -8,42 +8,57 @@ A trainee conducts a text interview with an AI-played traveler persona. When rea
 
 ## Quick Start
 
-### Option A — No API key (fixture mode, works immediately)
+### Option A — No API key (fixture mode, for dev and testing purpose only)
 
 ```bash
-# install all deps from the repo root
-npm run install:all
-
 # terminal 1 — server on :3000
 cd server
-npm run server
+npm install && npx tsx src/server.ts
 
 # terminal 2 — client on :5173
 cd client
-npm run dev
+npm install && npm run dev
 ```
 
 Open **http://localhost:5173**
 
-### Option B — With OpenAI (real AI responses)
+Fixture mode uses canned replies — great for verifying the UI works.
+
+### Option B — Groq (recommended / free tier)
+
+Create `server/.env` from the example:
 
 ```bash
 cd server
-Copy-Item .env.example .env   # Windows
-# cp .env.example .env        # Mac/Linux
+cp .env.example .env
 ```
 
-Edit `server/.env` and set:
-```
-OPENAI_API_KEY=sk-proj-your_key_here
+Set your Groq key and preferred model:
+
+```env
+GROQ_API_KEY=set_your_key_here
+TRAVELER_MODEL=llama-3.3-70b-versatile
 ```
 
-Then start both terminals as above. The startup log will confirm:
+The server log will confirm:
 ```
-[traveler] engine: gpt-4o-mini
+[traveler] engine: groq (llama-3.3-70b-versatile)
 ```
 
-### Option C — Docker
+Groq's free tier serves Llama-class models via an OpenAI-compatible endpoint — no paid account needed.
+
+### Option C — Ollama (local, $0)
+
+```bash
+# Start Ollama locally (must be running first)
+ollama pull llama3.3
+
+# In server/.env:
+OLLAMA_MODEL=llama3.3
+# OLLAMA_BASE_URL=http://localhost:11434/v1  # default; change if remote
+```
+
+### Option D — Docker
 
 ```bash
 docker compose up --build
@@ -56,12 +71,11 @@ Open **http://localhost:5173**
 ## How It Works
 
 ```
-Pick a scenario  →  Interview the traveler  →  Make a decision  →  See your debrief
+Start a session  →  Interview the traveler  →  Make a decision  →  See your debrief
 ```
 
 | Step | What happens |
 |---|---|
-| **Scenario list** | Choose a practice scenario (difficulty 1–3) |
 | **Session chat** | Type questions; the AI traveler responds based on their persona and backstory |
 | **Decision** | Type an optional reason, then click **No Action** or **Refer** |
 | **Debrief** | Rubric scores (1–5) across 5 dimensions, decision outcome, and teaching points |
@@ -94,13 +108,20 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `3000` | Server port |
-| `OPENAI_API_KEY` | — | Enables GPT traveler. Priority over Gemini. |
-| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use |
-| `GEMINI_API_KEY` | — | Enables Gemini traveler (fallback to OpenAI) |
-| `ALLOWED_ORIGIN` | `*` | CORS origin (set to your frontend URL in prod) |
-| `RATE_LIMIT_MAX` | `20` | Max session creations per IP per minute |
+| `GROQ_API_KEY` | — | **Recommended.** Groq free tier — serves Llama-class models via OpenAI-compatible endpoint. |
+| `TRAVELER_MODEL` | `llama-3.3-70b-versatile` | Pinned role-play model (recorded in traces). |
+| `OLLAMA_MODEL` | — | Set to enable local Ollama (e.g. `llama3.3`). |
+| `OLLAMA_BASE_URL` | `http://localhost:11434/v1` | Override for remote Ollama. |
+| `OPENAI_API_KEY` | — | OpenAI (paid). Falls back to `gpt-4o-mini`. |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use. |
+| `TRAVELER_API_KEY` | — | Any OpenAI-compatible host (both key + base required). |
+| `TRAVELER_API_BASE` | — | Base URL for the compatible host. |
+| `GEMINI_API_KEY` | — | Gemini (free-tier rate limits are tight). |
+| `ALLOWED_ORIGIN` | `*` | CORS origin (set to your frontend URL in prod). |
+| `RATE_LIMIT_MAX` | `20` | Max session creations per IP per minute. |
+| `PROBE_TURN_DELAY_MS` | auto | Pacing between turns (ms). Groq free tier tokens/min limited. |
 
-**Traveler priority:** `OPENAI_API_KEY` → `GEMINI_API_KEY` → fixture (no key needed)
+**Traveler model choice precedence:** `GROQ_API_KEY` → `OLLAMA_MODEL` → `OPENAI_API_KEY` → `TRAVELER_API_*` → `GEMINI_API_KEY` → fixture
 
 ---
 
@@ -114,19 +135,20 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 │
 ├── server/                        # Express + ts-node (port 3000)
 │   └── src/
-│       ├── contracts.ts           # Shared TypeScript types
 │       ├── app.ts                 # Express app (middleware + routes)
 │       ├── server.ts              # Entry point (listen)
 │       ├── routes/                # scenarios, sessions, feedback, traces
 │       ├── session/               # Engine, store, types
-│       ├── traveler/              # OpenAI / Gemini / fixture engines
-│       ├── eval/                  # Rubric scorer + harness
+│       ├── traveler/              # Groq / Ollama / OpenAI (compat) / Gemini / fixture
+│       ├── eval/                  # Rubric scorer + harness + labeled set
+│       ├── probes/                # Role-play probe suites + differential
 │       ├── feedback/              # Feedback report store
 │       ├── scenarios/             # Scenario card registry
+│       ├── variations/            # Variation generator + invariance checker
 │       └── tracing/               # Session event tracer
 │
 └── shared/
-    └── contracts/                 # JSON schemas + rubric + indicator catalog
+    └── contracts/                 # JSON schemas + rubric + indicator catalog + examples
 ```
 
 ---
@@ -135,26 +157,16 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 
 ```bash
 cd server
-npm test          # 82 tests across 5 files
+npm test          # ~125+ tests
 npm run typecheck
 ```
 
 ---
 
-## Recent Changes
+## Development Notes
 
-| # | What was added | Files |
-|---|---|---|
-| 1 | **Feedback endpoint** — scores session against 5 rubric dimensions, idempotent, cached | `routes/feedback.ts`, `feedback/store.ts` |
-| 2 | **Transcript GET** — dedicated endpoint for completed session transcripts | `routes/sessions.ts` |
-| 3 | **Auth removed for v1** — PRD out-of-scope #4 (single local user) | — |
-| 4 | **CORS lockdown** — `ALLOWED_ORIGIN` env var | `app.ts` |
-| 5 | **Rate limiting** — `express-rate-limit` on session creation | `app.ts` |
-| 6 | **Session persistence** — write-through JSON file; sessions survive restarts | `session/store.ts` |
-| 7 | **OpenAI traveler** — GPT-4o-mini via REST, no SDK; priority over Gemini | `traveler/openai.ts`, `traveler/index.ts` |
-| 8 | **Improved fixture traveler** — topic-aware replies, rotating pool; no more stuck loops | `traveler/fixture.ts` |
-| 9 | **Frontend training simulator** — 3-view app replacing placeholder message board | `client/src/App.tsx`, `client/src/api.ts` |
-| 10 | **82 tests** — scenarios CRUD, session HTTP routes, feedback, scorer unit tests | `*.test.ts` files |
-| 11 | **Error handler** — global middleware; no stack trace leaks | `app.ts` |
-| 12 | **`.env.example` audit** — all new vars documented | `server/.env.example` |
-
+- **Groq free tier** is the recommended AI backend for shared/live work. Sign up at https://console.groq.com.
+- **Ollama** provides unlimited local iteration at $0 cost. Run `ollama pull llama3.3` and set `OLLAMA_MODEL` in `.env`.
+- The server runs keyless in fixture mode — no API key needed for UI testing.
+- Session data persists to disk (write-through JSON). Sessions survive server restarts.
+- All routes are rate-limited. Adjust `RATE_LIMIT_MAX` in `.env` as needed.
