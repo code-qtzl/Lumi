@@ -159,7 +159,7 @@ export const labeledSet: LabeledExample[] = [
         { dimension_id: 'open-questions', score: 4, rationale: 'Good open questions (t002, t004) and gentle separation attempt (t006). One slightly closed question (t008).', anchors: ['t002', 't004', 't006'] },
         { dimension_id: 'trauma-informed-language', score: 4, rationale: 'Gentle, non-accusatory. Gave Elena space. The separation was handled well.', anchors: ['t006', 't008'] },
         { dimension_id: 'indicator-recognition', score: 5, rationale: 'Correctly identified itinerary ignorance, companion deference, and inability to name companion as behavioral cluster.', anchors: ['t005', 't007', 't009'] },
-        { dimension_id: 'false-positive-discipline', score: 5, rationale: 'Not applicable here (trafficking scenario), but did not over-escalate.', anchors: [] },
+        { dimension_id: 'false-positive-discipline', score: 3, rationale: 'Not applicable for trafficking scenario.', anchors: [] },
         { dimension_id: 'referral-protocol', score: 4, rationale: 'Correct referral decision. Documentation of specific indicators is thorough.', anchors: ['t009'] },
       ],
       decision_outcome: { trainee_decision: 'refer', ground_truth_type: 'trafficking', appropriate: true, note: 'Identified behavioral cluster and made correct referral.' },
@@ -360,7 +360,7 @@ export const labeledSet: LabeledExample[] = [
       dimensions: [
         { dimension_id: 'open-questions', score: 1, rationale: 'Every prompt was a threat or demand; no open questions at all.', anchors: ['t002', 't005'] },
         { dimension_id: 'trauma-informed-language', score: 1, rationale: 'Threats directed at a likely victim push disclosure further away and re-traumatize.', anchors: ['t002'] },
-        { dimension_id: 'indicator-recognition', score: 3, rationale: 'Did register third-party answering and itinerary ignorance, though by pressure rather than exploration.', anchors: ['t004', 't006'] },
+        { dimension_id: 'indicator-recognition', score: 2, rationale: 'Partially registered third-party answering and itinerary ignorance, but all questions were threats or demands — no exploration.', anchors: ['t004', 't006'] },
         { dimension_id: 'false-positive-discipline', score: 3, rationale: 'Not applicable for trafficking scenario.', anchors: [] },
         { dimension_id: 'referral-protocol', score: 3, rationale: 'Referred — correct channel — but the confrontation compromised the encounter first.', anchors: ['t002'] },
       ],
