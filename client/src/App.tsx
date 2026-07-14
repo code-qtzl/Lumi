@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import {
 	getSessionReveal,
@@ -6,6 +6,7 @@ import {
 	submitTurn,
 	endSession,
 	requestFeedback,
+	getHistory,
 } from './api';
 import type {
 	ScenarioReveal,
@@ -13,7 +14,7 @@ import type {
 	FeedbackReport,
 } from './api';
 
-type View = 'scenarios' | 'session' | 'feedback';
+type View = 'home' | 'session' | 'feedback' | 'history';
 
 const DIMENSION_LABELS: Record<string, string> = {
 	'open-questions': 'Open Questions',
@@ -23,8 +24,37 @@ const DIMENSION_LABELS: Record<string, string> = {
 	'referral-protocol': 'Referral Protocol',
 };
 
+// Static tips derived from indicator catalog and rubric
+const TRAINING_TIPS = [
+	{
+		id: 'open-questions',
+		title: 'Ask Open Questions',
+		text: 'Use "How has your trip been?" instead of "Are you being trafficked?" Open prompts let travelers volunteer information.',
+	},
+	{
+		id: 'trauma-informed',
+		title: 'Trauma-Informed Language',
+		text: 'Remove pressure. "Take your time" and "I understand" keep frightened people talking.',
+	},
+	{
+		id: 'indicators',
+		title: 'Look for Indicators',
+		text: 'Notice: companion answers for traveler, no itinerary knowledge, scripted stories, not in control of documents, fearful deference.',
+	},
+	{
+		id: 'false-positive',
+		title: 'Avoid False Positives',
+		text: 'Escalate on behavioral clusters, not nervousness alone. Innocent travelers may be anxious about flying.',
+	},
+	{
+		id: 'referral',
+		title: 'Follow Referral Protocol',
+		text: 'Refer through proper channels — never confront, accuse, or attempt rescue directly.',
+	},
+];
+
 export default function App() {
-	const [view, setView] = useState<View>('scenarios');
+	const [view, setView] = useState<View>('home');
 
 	// ── Start view ────────────────────────────────────────────────────────────
 	const [startError, setStartError] = useState('');
@@ -41,12 +71,32 @@ export default function App() {
 	const [sessionError, setSessionError] = useState('');
 	const [decisionReason, setDecisionReason] = useState('');
 	const [deciding, setDeciding] = useState(false);
+	const [notes, setNotes] = useState('');
 	const chatEndRef = useRef<HTMLDivElement>(null);
 
 	// ── Feedback view ─────────────────────────────────────────────────────────
 	const [feedback, setFeedback] = useState<FeedbackReport | null>(null);
 	const [reveal, setReveal] = useState<ScenarioReveal | null>(null);
 	const [feedbackError, setFeedbackError] = useState('');
+
+	// ── History view ───────────────────────────────────────────────────────────
+	const [historyReports, setHistoryReports] = useState<FeedbackReport[]>([]);
+	const [historyError, setHistoryError] = useState('');
+
+	// ── Load notes from localStorage when session starts ───────────────────────
+	useEffect(() => {
+		if (sessionId) {
+			const saved = localStorage.getItem(`lumi-notes-${sessionId}`);
+			setNotes(saved ?? '');
+		}
+	}, [sessionId]);
+
+	// ── Auto-save notes to localStorage ───────────────────────────────────────
+	useEffect(() => {
+		if (sessionId) {
+			localStorage.setItem(`lumi-notes-${sessionId}`, notes);
+		}
+	}, [notes, sessionId]);
 
 	// ── Auto-scroll chat to bottom ────────────────────────────────────────────
 	useEffect(() => {
@@ -131,36 +181,78 @@ export default function App() {
 		setFeedback(null);
 		setReveal(null);
 		setFeedbackError('');
-		setView('scenarios');
+		setNotes('');
+		setView('home');
 	}
+
+	function handleViewHistory() {
+		setHistoryError('');
+		getHistory()
+			.then(setHistoryReports)
+			.catch(e => setHistoryError(e.message));
+		setView('history');
+	}
+
+	// ── History helpers ───────────────────────────────────────────────────────
+
+	const getSessionDate = useCallback((sessionId: string): string => {
+		// session_id format: sess-YYYY-MM-DD-XXXX
+		const match = sessionId.match(/sess-(\d{4}-\d{2}-\d{2})/);
+		return match ? match[1] : '';
+	}, []);
+
+	const getDaysWithSessions = useCallback((): Set<string> => {
+		const days = new Set<string>();
+		historyReports.forEach(r => {
+			const date = getSessionDate(r.session_id);
+			if (date) {
+				days.add(date);
+			}
+		});
+		return days;
+	}, [historyReports, getSessionDate]);
+
+	const getCorrectRate = useCallback((): number => {
+		if (historyReports.length === 0) return 0;
+		const correct = historyReports.filter(r => r.decision_outcome.appropriate).length;
+		return Math.round((correct / historyReports.length) * 100);
+	}, [historyReports]);
+
+	const getAvgScore = useCallback((): number => {
+		if (historyReports.length === 0) return 0;
+		const total = historyReports.reduce((sum, r) => {
+			const avg = r.dimensions.reduce((s, d) => s + d.score, 0) / r.dimensions.length;
+			return sum + avg;
+		}, 0);
+		return Math.round((total / historyReports.length) * 10) / 10;
+	}, [historyReports]);
 
 	// ── Render ────────────────────────────────────────────────────────────────
 
-	if (view === 'scenarios') {
-		// The trainee never sees or picks a scenario — the situation must be
-		// unknown (U1), or the ground truth is given away before the interview.
+	if (view === 'home') {
 		return (
-			<div className="lumi-app">
+			<div className="lumi-app lumi-home">
 				<header className="lumi-header">
 					<h1>Lumi</h1>
 					<p className="lumi-subtitle">Training Simulator</p>
 				</header>
 				{startError && <div className="lumi-error">{startError}</div>}
-				<div className="scenario-card start-panel">
-					<div className="scenario-info">
-						<span className="scenario-title">Practice an encounter</span>
-						<p className="start-blurb">
-							You'll interview a traveler whose situation you don't know.
-							Ask your questions, then commit to a decision: refer or no action.
-							You'll get a full debrief afterwards.
-						</p>
-					</div>
+				<div className="home-hero">
+					<img src="/Lumi.jpg" alt="Lumi Training" className="cover-image" />
+				</div>
+				<div className="home-actions">
 					<button
-						className="btn btn-primary"
+						className="btn btn-primary btn-large"
 						onClick={handleStartSession}
 						disabled={starting}
 					>
-						{starting ? 'Starting…' : 'Start Practice Session'}
+						{starting ? 'Starting…' : 'Start Session'}
+					</button>
+					<button
+						className="btn btn-secondary btn-large"
+						onClick={handleViewHistory}
+					>
+						View History
 					</button>
 				</div>
 			</div>
@@ -172,35 +264,58 @@ export default function App() {
 		const mustDecide = sessionStatus === 'awaiting_decision';
 
 		return (
-			<div className="lumi-app lumi-session">
+			<div className="lumi-app lumi-session-layout">
 				<header className="lumi-header">
-					<button className="btn-back" onClick={handleReset}>← Scenarios</button>
+					<button className="btn-back" onClick={handleReset}>← Home</button>
 					<div className="session-meta">
 						<span className="session-title">Practice interview — {travelerName}</span>
 						<span className={`session-badge badge-${sessionStatus}`}>{sessionStatus.replace('_', ' ')}</span>
 					</div>
 				</header>
 
-				<div className="chat-thread">
-					{turns.map(turn => (
-						<div key={turn.turn_id} className={`bubble bubble-${turn.role}`}>
-							<span className="bubble-label">
-								{turn.role === 'trainee' ? 'You' : turn.role === 'companion' ? 'Companion' : travelerName}
-							</span>
-							<p className="bubble-text">{turn.text}</p>
-						</div>
-					))}
-					{nudge === 'consider_deciding' && (
-						<div className="nudge-banner">
-							You've asked many questions — consider making your decision.
-						</div>
-					)}
-					{mustDecide && (
-						<div className="nudge-banner nudge-hard">
-							Turn limit reached. You must now make your decision.
-						</div>
-					)}
-					<div ref={chatEndRef} />
+				<div className="session-container">
+					<aside className="notes-panel">
+						<h3>Notes</h3>
+						<textarea
+							className="notes-textarea"
+							placeholder="Take notes during the interview..."
+							value={notes}
+							onChange={e => setNotes(e.target.value)}
+						/>
+						{notes && <span className="notes-saved">Saved</span>}
+					</aside>
+
+					<div className="chat-thread">
+						{turns.map(turn => (
+							<div key={turn.turn_id} className={`bubble bubble-${turn.role}`}>
+								<span className="bubble-label">
+									{turn.role === 'trainee' ? 'You' : turn.role === 'companion' ? 'Companion' : travelerName}
+								</span>
+								<p className="bubble-text">{turn.text}</p>
+							</div>
+						))}
+						{nudge === 'consider_deciding' && (
+							<div className="nudge-banner">
+								You've asked many questions — consider making your decision.
+							</div>
+						)}
+						{mustDecide && (
+							<div className="nudge-banner nudge-hard">
+								Turn limit reached. You must now make your decision.
+							</div>
+						)}
+						<div ref={chatEndRef} />
+					</div>
+
+					<aside className="tips-panel">
+						<h3>Training Tips</h3>
+						{TRAINING_TIPS.map(tip => (
+							<div key={tip.id} className="tip-item">
+								<strong>{tip.title}</strong>
+								<p>{tip.text}</p>
+							</div>
+						))}
+					</aside>
 				</div>
 
 				{sessionError && <div className="lumi-error lumi-error-inline">{sessionError}</div>}
@@ -252,7 +367,7 @@ export default function App() {
 		);
 	}
 
-	// ── Feedback view ─────────────────────────────────────────────────────────
+	// ── Feedback view ───────────────────────────────────────────────────────────
 	if (view === 'feedback' && !feedback) {
 		// Session ended but the debrief fetch failed — retryable; the decision
 		// itself is already committed.
@@ -268,7 +383,7 @@ export default function App() {
 						Retry loading debrief
 					</button>
 					<button className="btn" onClick={handleReset}>
-						Back to scenarios
+						Back to home
 					</button>
 				</div>
 			</div>
@@ -342,7 +457,7 @@ export default function App() {
 									{alt.turn_id}
 								</button>
 								<div className="alternative-body">
-									<p className="alternative-question">“{alt.suggested_question}”</p>
+									<p className="alternative-question">"{alt.suggested_question}"</p>
 									<p className="alternative-why">{alt.why}</p>
 								</div>
 							</div>
@@ -381,9 +496,107 @@ export default function App() {
 				{feedbackError && <div className="lumi-error">{feedbackError}</div>}
 
 				<div className="feedback-actions">
-					<button className="btn btn-primary" onClick={handleReset}>
-						Try Another Scenario
+					<button className="btn btn-primary" onClick={handleViewHistory}>
+						View History
 					</button>
+					<button className="btn" onClick={handleReset}>
+						Try Another Session
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	// ── History view ───────────────────────────────────────────────────────────
+	if (view === 'history') {
+		const daysWithSessions = getDaysWithSessions();
+		const correctRate = getCorrectRate();
+		const avgScore = getAvgScore();
+
+		// Calendar for current month
+		const now = new Date();
+		const year = now.getFullYear();
+		const month = now.getMonth();
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const firstDay = new Date(year, month, 1).getDay();
+
+		// Score trend data (last 10 sessions)
+		const trendData = historyReports.slice(-10).map((r, i) => ({
+			index: i,
+			score: r.dimensions.reduce((s, d) => s + d.score, 0) / r.dimensions.length,
+		}));
+
+		return (
+			<div className="lumi-app lumi-history">
+				<header className="lumi-header">
+					<button className="btn-back" onClick={handleReset}>← Home</button>
+					<h1>Training History</h1>
+				</header>
+
+				{historyError && <div className="lumi-error">{historyError}</div>}
+
+				<div className="history-stats">
+					<div className="stat-tile">
+						<span className="stat-value">{historyReports.length}</span>
+						<span className="stat-label">Total Sessions</span>
+					</div>
+					<div className="stat-tile">
+						<span className="stat-value">{correctRate}%</span>
+						<span className="stat-label">Correct Decision Rate</span>
+					</div>
+					<div className="stat-tile">
+						<span className="stat-value">{avgScore}/5</span>
+						<span className="stat-label">Average Score</span>
+					</div>
+				</div>
+
+				<div className="history-content">
+					<section className="calendar-section">
+						<h2>{now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+						<div className="calendar-grid">
+							{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+								<div key={d} className="calendar-header">{d}</div>
+							))}
+							{Array.from({ length: firstDay }).map((_, i) => (
+								<div key={`empty-${i}`} className="calendar-day empty"></div>
+							))}
+							{Array.from({ length: daysInMonth }, (_, i) => {
+								const day = i + 1;
+								const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+								const hasSession = daysWithSessions.has(dateStr);
+								return (
+									<div key={day} className={`calendar-day ${hasSession ? 'has-session' : ''}`}>
+										{day}
+										{hasSession && <span className="session-dot"></span>}
+									</div>
+								);
+							})}
+						</div>
+					</section>
+
+					<section className="trend-section">
+						<h2>Score Trend</h2>
+						{trendData.length > 0 ? (
+							<svg className="trend-chart" viewBox="0 0 300 100" preserveAspectRatio="none">
+								<path
+									className="trend-line"
+									d={`M0,${100 - trendData[0].score * 20} ${trendData.map(d => `L${d.index * 30 + 10},${100 - d.score * 20}`).join(' ')}`}
+									fill="none"
+								/>
+								{trendData.map(d => (
+									<circle
+										key={d.index}
+										cx={d.index * 30 + 10}
+										cy={100 - d.score * 20}
+										r="3"
+										className="trend-point"
+									/>
+								))}
+							</svg>
+						) : (
+							<p className="no-data">No sessions yet</p>
+						)}
+					</section>
 				</div>
 			</div>
 		);
@@ -391,4 +604,3 @@ export default function App() {
 
 	return null;
 }
-

@@ -126,4 +126,7 @@ export const endSession = (
 	});
 
 export const requestFeedback = (session_id: string) =>
-	api<FeedbackReport>(`/sessions/${session_id}/feedback`, { method: 'POST' });
+  api<FeedbackReport>(`/sessions/${session_id}/feedback`, { method: 'POST' });
+
+export const getHistory = () =>
+  api<FeedbackReport[]>('/history');
