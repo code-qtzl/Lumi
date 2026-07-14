@@ -1,6 +1,7 @@
 {
-	"name": "beacon-app",
+	"name": "lumi",
 	"version": "1.0.0",
+	"description": "Lumi — An AI-powered training simulator for frontline professionals",
 	"scripts": {
 		"install:all": "cd server && npm install && cd ../client && npm install",
 		"dev": "echo \"🫣 Wrong folder?: 'npm run dev' should be run in ./client directory\" && echo \"💡 Try: 'cd client && npm run dev'\" && exit 1",

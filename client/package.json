@@ -1,5 +1,6 @@
 {
-	"name": "beacon-app-client",
+	"name": "lumi-client",
+	"description": "Lumi client — React training simulator frontend",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
