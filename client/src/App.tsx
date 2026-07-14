@@ -15,6 +15,17 @@ import type {
 } from './api';
 
 type View = 'home' | 'session' | 'feedback' | 'history';
+type Theme = 'dark' | 'light';
+
+// Apply theme to document
+function applyTheme(theme: Theme) {
+	document.documentElement.setAttribute('data-theme', theme);
+}
+
+// Load theme from localStorage
+function loadTheme(): Theme {
+	return (localStorage.getItem('lumi-theme') as Theme) || 'dark';
+}
 
 const DIMENSION_LABELS: Record<string, string> = {
 	'open-questions': 'Open Questions',
@@ -55,6 +66,11 @@ const TRAINING_TIPS = [
 
 export default function App() {
 	const [view, setView] = useState<View>('home');
+	const [theme, setTheme] = useState<Theme>(() => {
+		const saved = loadTheme();
+		applyTheme(saved);
+		return saved;
+	});
 
 	// ── Start view ────────────────────────────────────────────────────────────
 	const [startError, setStartError] = useState('');
@@ -82,6 +98,19 @@ export default function App() {
 	// ── History view ───────────────────────────────────────────────────────────
 	const [historyReports, setHistoryReports] = useState<FeedbackReport[]>([]);
 	const [historyError, setHistoryError] = useState('');
+	const [hasHistory, setHasHistory] = useState(false);
+
+	// ── Load theme on mount ───────────────────────────────────────────────────
+	useEffect(() => {
+		applyTheme(theme);
+	}, [theme]);
+
+	// ── Check for existing history on mount ───────────────────────────────────
+	useEffect(() => {
+		getHistory()
+			.then(reports => setHasHistory(Array.isArray(reports) && reports.length > 0))
+			.catch(() => setHasHistory(false));
+	}, []);
 
 	// ── Load notes from localStorage when session starts ───────────────────────
 	useEffect(() => {
@@ -188,7 +217,9 @@ export default function App() {
 	function handleViewHistory() {
 		setHistoryError('');
 		getHistory()
-			.then(setHistoryReports)
+			// Guard at the state boundary: a shape drift degrades to the error
+			// banner instead of a slice-on-object crash unmounting the app.
+			.then(r => setHistoryReports(Array.isArray(r) ? r : []))
 			.catch(e => setHistoryError(e.message));
 		setView('history');
 	}
@@ -233,8 +264,21 @@ export default function App() {
 		return (
 			<div className="lumi-app lumi-home">
 				<header className="lumi-header">
-					<h1>Lumi</h1>
-					<p className="lumi-subtitle">Training Simulator</p>
+					<div>
+						<h1>Lumi</h1>
+						<p className="lumi-subtitle">Training Simulator</p>
+					</div>
+					<button
+						className="theme-toggle"
+						onClick={() => {
+							const newTheme = theme === 'dark' ? 'light' : 'dark';
+							setTheme(newTheme);
+							localStorage.setItem('lumi-theme', newTheme);
+						}}
+						aria-label="Toggle dark mode"
+					>
+						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+					</button>
 				</header>
 				{startError && <div className="lumi-error">{startError}</div>}
 				<div className="home-hero">
@@ -249,8 +293,9 @@ export default function App() {
 						{starting ? 'Starting…' : 'Start Session'}
 					</button>
 					<button
-						className="btn btn-secondary btn-large"
+						className={`btn btn-secondary btn-large ${!hasHistory ? 'btn-disabled' : ''}`}
 						onClick={handleViewHistory}
+						disabled={!hasHistory}
 					>
 						View History
 					</button>
@@ -266,23 +311,35 @@ export default function App() {
 		return (
 			<div className="lumi-app lumi-session-layout">
 				<header className="lumi-header">
-					<button className="btn-back" onClick={handleReset}>← Home</button>
-					<div className="session-meta">
-						<span className="session-title">Practice interview — {travelerName}</span>
-						<span className={`session-badge badge-${sessionStatus}`}>{sessionStatus.replace('_', ' ')}</span>
+					<div>
+						<button className="btn-back" onClick={handleReset}>← Home</button>
+						<div className="session-meta">
+							<span className="session-title">Practice interview — {travelerName}</span>
+							<span className={`session-badge badge-${sessionStatus}`}>{sessionStatus.replace('_', ' ')}</span>
+						</div>
 					</div>
+					<button
+						className="theme-toggle"
+						onClick={() => {
+							const newTheme = theme === 'dark' ? 'light' : 'dark';
+							setTheme(newTheme);
+							localStorage.setItem('lumi-theme', newTheme);
+						}}
+						aria-label="Toggle dark mode"
+					>
+						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+					</button>
 				</header>
 
 				<div className="session-container">
-					<aside className="notes-panel">
-						<h3>Notes</h3>
-						<textarea
-							className="notes-textarea"
-							placeholder="Take notes during the interview..."
-							value={notes}
-							onChange={e => setNotes(e.target.value)}
-						/>
-						{notes && <span className="notes-saved">Saved</span>}
+					<aside className="tips-panel">
+						<h3>Training Tips</h3>
+						{TRAINING_TIPS.map(tip => (
+							<div key={tip.id} className="tip-item">
+								<strong>{tip.title}</strong>
+								<p>{tip.text}</p>
+							</div>
+						))}
 					</aside>
 
 					<div className="chat-thread">
@@ -307,14 +364,15 @@ export default function App() {
 						<div ref={chatEndRef} />
 					</div>
 
-					<aside className="tips-panel">
-						<h3>Training Tips</h3>
-						{TRAINING_TIPS.map(tip => (
-							<div key={tip.id} className="tip-item">
-								<strong>{tip.title}</strong>
-								<p>{tip.text}</p>
-							</div>
-						))}
+					<aside className="notes-panel">
+						<h3>Notes</h3>
+						<textarea
+							className="notes-textarea"
+							placeholder="Take notes during the interview..."
+							value={notes}
+							onChange={e => setNotes(e.target.value)}
+						/>
+						{notes && <span className="notes-saved">Saved</span>}
 					</aside>
 				</div>
 
@@ -374,8 +432,21 @@ export default function App() {
 		return (
 			<div className="lumi-app lumi-feedback">
 				<header className="lumi-header">
-					<h1>Debrief</h1>
-					<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
+					<div>
+						<h1>Debrief</h1>
+						<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
+					</div>
+					<button
+						className="theme-toggle"
+						onClick={() => {
+							const newTheme = theme === 'dark' ? 'light' : 'dark';
+							setTheme(newTheme);
+							localStorage.setItem('lumi-theme', newTheme);
+						}}
+						aria-label="Toggle dark mode"
+					>
+						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+					</button>
 				</header>
 				{feedbackError && <div className="lumi-error">{feedbackError}</div>}
 				<div className="feedback-actions">
@@ -400,8 +471,21 @@ export default function App() {
 		return (
 			<div className="lumi-app lumi-feedback">
 				<header className="lumi-header">
-					<h1>Debrief</h1>
-					<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
+					<div>
+						<h1>Debrief</h1>
+						<p className="lumi-subtitle">{reveal?.title ?? 'Practice session'}</p>
+					</div>
+					<button
+						className="theme-toggle"
+						onClick={() => {
+							const newTheme = theme === 'dark' ? 'light' : 'dark';
+							setTheme(newTheme);
+							localStorage.setItem('lumi-theme', newTheme);
+						}}
+						aria-label="Toggle dark mode"
+					>
+						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+					</button>
 				</header>
 
 				<div className="decision-outcome">
@@ -529,8 +613,21 @@ export default function App() {
 		return (
 			<div className="lumi-app lumi-history">
 				<header className="lumi-header">
-					<button className="btn-back" onClick={handleReset}>← Home</button>
-					<h1>Training History</h1>
+					<div>
+						<button className="btn-back" onClick={handleReset}>← Home</button>
+						<h1>Training History</h1>
+					</div>
+					<button
+						className="theme-toggle"
+						onClick={() => {
+							const newTheme = theme === 'dark' ? 'light' : 'dark';
+							setTheme(newTheme);
+							localStorage.setItem('lumi-theme', newTheme);
+						}}
+						aria-label="Toggle dark mode"
+					>
+						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+					</button>
 				</header>
 
 				{historyError && <div className="lumi-error">{historyError}</div>}

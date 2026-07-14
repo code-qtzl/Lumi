@@ -128,5 +128,8 @@ export const endSession = (
 export const requestFeedback = (session_id: string) =>
   api<FeedbackReport>(`/sessions/${session_id}/feedback`, { method: 'POST' });
 
+// Server wraps the list: { reports: [...] } — unwrap here so callers get the
+// array. (Passing the wrapper through is what broke the history view: .slice
+// on an object threw and unmounted the app.)
 export const getHistory = () =>
-  api<FeedbackReport[]>('/history');
+  api<{ reports: FeedbackReport[] }>('/history').then(r => r.reports);
