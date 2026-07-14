@@ -1,18 +1,18 @@
 services:
-    server:
-        build: ./server
-        ports:
-            - '3000:3000'
-        volumes:
-            - ./shared:/shared:ro
+  server:
+    build: ./server
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./shared:/shared:ro
 
-    client:
-        build: ./client
-        ports:
-            - '5173:5173'
-        environment:
-            - VITE_DEV_SERVER_URL=http://server:3000
-        volumes:
-            - ./client/src:/app/src
-        depends_on:
-            - server
+  client:
+    build: ./client
+    ports:
+      - '5173:5173'
+    environment:
+      - VITE_DEV_SERVER_URL=http://server:3000
+    volumes:
+      - ./client/src:/app/src
+    depends_on:
+      - server

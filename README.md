@@ -13,7 +13,7 @@ A trainee conducts a text interview with an AI-played traveler persona. When rea
 ```bash
 # terminal 1 — server on :3000
 cd server
-npm install && npx tsx src/server.ts
+npm install && npm run server
 
 # terminal 2 — client on :5173
 cd client
