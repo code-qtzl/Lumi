@@ -487,7 +487,7 @@ button:hover {
 	background: #2b3a55;
 }
 .transcript-turn-id {
-	color: #667;
+	color: #8a8aa0; /* >=4.5:1 on the dark base; #667 was 2.8:1 */
 	font-family: monospace;
 	flex: 0 0 40px;
 }
