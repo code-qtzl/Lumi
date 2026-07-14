@@ -618,7 +618,8 @@
 	border-radius: 8px;
 	padding: 12px;
 	margin: 0 8px;
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
 }
 
 .notes-panel h3,
@@ -630,8 +631,8 @@
 
 .notes-textarea {
 	width: 100%;
-	height: 100%;
-	min-height: 150px;
+	flex: 1;
+	min-height: 120px;
 	background: var(--color-bg-input);
 	border: 1px solid var(--color-border);
 	border-radius: 6px;
@@ -639,6 +640,7 @@
 	font-size: 0.85rem;
 	padding: 8px;
 	resize: none;
+	box-sizing: border-box;
 }
 
 .notes-textarea:focus {
@@ -834,8 +836,6 @@
    end of the file. */
 
 .start-panel,
-.notes-panel,
-.tips-panel,
 .stat-tile,
 .calendar-section,
 .trend-section,
@@ -857,6 +857,22 @@
 	width: 260px;
 	flex-shrink: 0;
 	margin: 0; /* gutters come from the container gap, not per-tile margins */
+	display: flex;
+	flex-direction: column;
+}
+
+.notes-textarea {
+	width: 100%;
+	flex: 1;
+	min-height: 120px;
+	background: var(--color-bg-input);
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	color: var(--color-text);
+	font-size: 0.85rem;
+	padding: 8px;
+	resize: none;
+	box-sizing: border-box;
 }
 
 .tip-item {
