@@ -8,7 +8,6 @@
 import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine } from './types';
 import { fromTravelerPerspective } from './prompt';
-import { getTraveler } from './index';
 
 /** Capitalize a sentence-initial companion reference ("my father" → "My father"). */
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -16,15 +15,7 @@ const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 /** TravelerEngine wrapper — the engine consumes travelers only via this seam. */
 export const fixtureTraveler: TravelerEngine = {
   name: 'fixture',
-  reply: async (card, turns, sessionId) => {
-    // 50% chance to use the real LLM for natural variety
-    if (Math.random() < 0.5) {
-      try {
-        return await getTraveler().reply(card, turns, sessionId);
-      } catch {
-        // Fall through to fixture on error
-      }
-    }
+  reply: async (card, turns) => {
     return [{ role: 'traveler', text: getTravelerReply(card, turns) }];
   },
 };
@@ -117,6 +108,8 @@ function getOpeningLine(card: ScenarioCard): string {
     'Is there something I can do for you?',
   ];
 
+  // Each option has the same probability; do not derive this from turn count
+  // or scenario type, which would make repeated openings predictable.
   return openingLines[Math.floor(Math.random() * openingLines.length)];
 }
 

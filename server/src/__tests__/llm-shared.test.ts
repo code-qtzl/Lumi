@@ -4,7 +4,7 @@
  */
 
 import { parseReplies, trippedGuard } from '../traveler/llm-shared';
-import { fromTravelerPerspective } from '../traveler/prompt';
+import { buildSystemPrompt, fromTravelerPerspective } from '../traveler/prompt';
 import { fixtureTraveler } from '../traveler/fixture';
 
 describe('parseReplies', () => {
@@ -101,6 +101,24 @@ describe('fromTravelerPerspective (third-person cards → first-person speech)',
   });
 });
 
+describe('opening prompt', () => {
+  const card = {
+    scenario_id: 'x', title: 'x',
+    persona: { name: 'Maya', traveling_with: 'her father', backstory: 'b' },
+    role_play_instructions: 'r',
+    emotional_presentation: { label: 'calm' },
+    ground_truth: { type: 'innocent' as const, indicators_present: [] },
+    reveal: { summary: 's', teaching_points: [] },
+  };
+
+  it('frames the opening as a natural airport or immigration first contact', () => {
+    const prompt = buildSystemPrompt(card);
+    expect(prompt).toContain('airport personnel or an immigration officer');
+    expect(prompt).toContain('not a scripted border declaration');
+    expect(prompt).toContain('documents, trip purpose, or a companion description unless the interviewer first asks');
+  });
+});
+
 describe('fixture opening line', () => {
   const card = {
     scenario_id: 'x', title: 'x',
@@ -115,5 +133,18 @@ describe('fixture opening line', () => {
     const [opening] = await fixtureTraveler.reply(card, [], 'sess-test');
     expect(opening.text).not.toMatch(/I'm Maya/);
     expect(opening.text).not.toMatch(/\bher father\b/);
+  });
+
+  it('selects opening options from the full random range', async () => {
+    const random = vi.spyOn(Math, 'random');
+    random.mockReturnValueOnce(0).mockReturnValueOnce(0.999999);
+    try {
+      const [first] = await fixtureTraveler.reply(card, [], 'sess-test');
+      const [last] = await fixtureTraveler.reply(card, [], 'sess-test');
+      expect(first.text).toBe('Hi.');
+      expect(last.text).toBe('Is there something I can do for you?');
+    } finally {
+      random.mockRestore();
+    }
   });
 });

@@ -63,3 +63,16 @@ describe('GET /api/history', () => {
     expect(report.dimensions).toHaveLength(5);
   });
 });
+
+describe('DELETE /api/history', () => {
+  it('clears all saved feedback reports', async () => {
+    const id = await completedSession();
+    await request(app).post(`/api/sessions/${id}/feedback`);
+
+    const clear = await request(app).delete('/api/history');
+    expect(clear.status).toBe(204);
+
+    const remaining = await request(app).get('/api/history');
+    expect(remaining.body.reports).toEqual([]);
+  });
+});

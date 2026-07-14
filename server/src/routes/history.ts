@@ -1,11 +1,12 @@
 /**
  * History routes — list all completed training sessions with feedback reports.
  *
- *   GET /api/history  — list all reports (for history page)
+ *   GET    /api/history  — list all reports (for history page)
+ *   DELETE /api/history  — clear all locally stored reports
  */
 
 import { Router } from 'express';
-import { listReports } from '../feedback/store';
+import { clearReports, listReports } from '../feedback/store';
 
 export const historyRouter = Router();
 
@@ -17,4 +18,9 @@ export const historyRouter = Router();
 historyRouter.get('/', (_req, res) => {
   const reports = listReports();
   return res.json({ reports });
+});
+
+historyRouter.delete('/', (_req, res) => {
+  clearReports();
+  return res.status(204).end();
 });

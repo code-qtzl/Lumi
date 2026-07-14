@@ -780,9 +780,45 @@
 
 .trend-chart {
 	width: 100%;
-	height: 100px;
+	height: 140px;
 	background: var(--color-bg-input);
 	border-radius: 6px;
+}
+
+.trend-grid-line {
+	stroke: var(--color-border);
+	stroke-width: 1;
+	stroke-dasharray: 2 3;
+}
+
+.trend-axis-line {
+	stroke: var(--color-text-muted);
+	stroke-width: 1;
+}
+
+.trend-axis-tick,
+.trend-axis-label {
+	fill: var(--color-text-muted);
+	font-size: 9px;
+}
+
+.trend-axis-label {
+	font-size: 10px;
+}
+
+.history-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.btn-danger {
+	color: #fecaca;
+	border-color: #b91c1c;
+}
+
+.btn-danger:hover:not(:disabled) {
+	background: #7f1d1d;
 }
 
 .trend-line {

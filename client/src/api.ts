@@ -89,6 +89,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 		const body = await res.json().catch(() => ({}));
 		throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
 	}
+	if (res.status === 204) return undefined as T;
 	return res.json() as Promise<T>;
 }
 
@@ -133,3 +134,6 @@ export const requestFeedback = (session_id: string) =>
 // on an object threw and unmounted the app.)
 export const getHistory = () =>
   api<{ reports: FeedbackReport[] }>('/history').then(r => r.reports);
+
+export const clearHistory = () =>
+  api<void>('/history', { method: 'DELETE' });

@@ -18,40 +18,58 @@ import { createOpenAITraveler } from './openai';
 import { createOpenAiCompatTraveler } from './openai-compat';
 
 let traveler: TravelerEngine | null = null;
+const MODEL_REPLY_RATE = 0.75;
+
+/**
+ * Gives configured model travelers most turns while retaining a small fixture
+ * lane for deterministic demo variety. Fixture mode itself remains keyless.
+ */
+export function createMixedTraveler(modelTraveler: TravelerEngine): TravelerEngine {
+  return {
+    name: `mix-${Math.round(MODEL_REPLY_RATE * 100)}:${modelTraveler.name}`,
+    reply(card, turns, sessionId) {
+      return Math.random() < MODEL_REPLY_RATE
+        ? modelTraveler.reply(card, turns, sessionId)
+        : fixtureTraveler.reply(card, turns, sessionId);
+    },
+  };
+}
 
 export function getTraveler(): TravelerEngine {
   if (traveler) return traveler;
 
   const { GROQ_API_KEY, OLLAMA_MODEL, OLLAMA_BASE_URL, OPENAI_API_KEY, TRAVELER_API_KEY, TRAVELER_API_BASE, GEMINI_API_KEY, TRAVELER_MODEL } = process.env;
 
+  let modelTraveler: TravelerEngine | null = null;
+
   if (GROQ_API_KEY) {
-    traveler = createOpenAiCompatTraveler({
+    modelTraveler = createOpenAiCompatTraveler({
       apiBase: 'https://api.groq.com/openai/v1',
       apiKey: GROQ_API_KEY,
       model: TRAVELER_MODEL || 'llama-3.3-70b-versatile',
       label: 'groq',
     });
   } else if (OLLAMA_MODEL) {
-    traveler = createOpenAiCompatTraveler({
+    modelTraveler = createOpenAiCompatTraveler({
       apiBase: OLLAMA_BASE_URL || 'http://localhost:11434/v1',
       apiKey: 'ollama', // Ollama ignores auth; the header just needs to exist
       model: OLLAMA_MODEL,
       label: 'ollama',
     });
   } else if (OPENAI_API_KEY) {
-    traveler = createOpenAITraveler(OPENAI_API_KEY);
+    modelTraveler = createOpenAITraveler(OPENAI_API_KEY);
   } else if (TRAVELER_API_KEY && TRAVELER_API_BASE) {
-    traveler = createOpenAiCompatTraveler({
+    modelTraveler = createOpenAiCompatTraveler({
       apiBase: TRAVELER_API_BASE,
       apiKey: TRAVELER_API_KEY,
       model: TRAVELER_MODEL || 'llama-3.3-70b',
       label: 'openai-compat',
     });
   } else if (GEMINI_API_KEY) {
-    traveler = createGeminiTraveler(GEMINI_API_KEY);
-  } else {
-    traveler = fixtureTraveler;
+    modelTraveler = createGeminiTraveler(GEMINI_API_KEY);
   }
+
+  traveler = modelTraveler ? createMixedTraveler(modelTraveler) : fixtureTraveler;
 
   console.log(`[traveler] engine: ${traveler.name}`);
   return traveler;

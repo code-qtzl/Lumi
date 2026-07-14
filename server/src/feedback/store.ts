@@ -50,6 +50,13 @@ export function listReports(): FeedbackReport[] {
   return Array.from(reports.values());
 }
 
+/** Remove all locally stored feedback reports at the trainee's request. */
+export function clearReports(): void {
+  ensureLoaded();
+  reports.clear();
+  persist();
+}
+
 export function __resetForTesting(): void {
   reports.clear();
   loaded = true; // Prevent loading from disk during tests

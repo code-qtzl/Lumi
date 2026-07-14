@@ -7,6 +7,7 @@ import {
 	endSession,
 	requestFeedback,
 	getHistory,
+	clearHistory,
 } from './api';
 import type {
 	ScenarioReveal,
@@ -136,6 +137,7 @@ export default function App() {
 
 	async function handleStartSession() {
 		setStarting(true);
+		setStartError('');
 		try {
 			const session = await createSession();
 			setSessionId(session.session_id);
@@ -222,6 +224,18 @@ export default function App() {
 			.then(r => setHistoryReports(Array.isArray(r) ? r : []))
 			.catch(e => setHistoryError(e.message));
 		setView('history');
+	}
+
+	async function handleClearHistory() {
+		if (!window.confirm('Clear all saved training history? This cannot be undone.')) return;
+		setHistoryError('');
+		try {
+			await clearHistory();
+			setHistoryReports([]);
+			setHasHistory(false);
+		} catch (e) {
+			setHistoryError(`Could not clear history: ${(e as Error).message}`);
+		}
 	}
 
 	// ── History helpers ───────────────────────────────────────────────────────
@@ -585,8 +599,8 @@ export default function App() {
 					<button className="btn btn-primary" onClick={handleViewHistory}>
 						View History
 					</button>
-					<button className="btn" onClick={handleReset}>
-						Try Another Session
+					<button className="btn" onClick={handleStartSession} disabled={starting}>
+						{starting ? 'Starting…' : 'Try Another Session'}
 					</button>
 				</div>
 			</div>
@@ -611,6 +625,13 @@ export default function App() {
 			index: i,
 			score: r.dimensions.reduce((s, d) => s + d.score, 0) / r.dimensions.length,
 		}));
+		const chart = { width: 320, height: 140, left: 34, right: 10, top: 10, bottom: 32 };
+		const plotWidth = chart.width - chart.left - chart.right;
+		const plotHeight = chart.height - chart.top - chart.bottom;
+		const xFor = (index: number) => trendData.length === 1
+			? chart.left + plotWidth / 2
+			: chart.left + (index * plotWidth) / (trendData.length - 1);
+		const yFor = (score: number) => chart.top + ((5 - score) / 4) * plotHeight;
 
 		return (
 			<div className="lumi-app lumi-history">
@@ -619,17 +640,22 @@ export default function App() {
 						<button className="btn-back" onClick={handleReset}>← Home</button>
 						<h1>Training History</h1>
 					</div>
-					<button
-						className="theme-toggle"
-						onClick={() => {
-							const newTheme = theme === 'dark' ? 'light' : 'dark';
-							setTheme(newTheme);
-							localStorage.setItem('lumi-theme', newTheme);
-						}}
-						aria-label="Toggle dark mode"
-					>
-						{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
-					</button>
+					<div className="history-header-actions">
+						<button className="btn btn-danger" onClick={handleClearHistory} disabled={historyReports.length === 0}>
+							Clear History
+						</button>
+						<button
+							className="theme-toggle"
+							onClick={() => {
+								const newTheme = theme === 'dark' ? 'light' : 'dark';
+								setTheme(newTheme);
+								localStorage.setItem('lumi-theme', newTheme);
+							}}
+							aria-label="Toggle dark mode"
+						>
+							{theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+						</button>
+					</div>
 				</header>
 
 				{historyError && <div className="lumi-error">{historyError}</div>}
@@ -676,21 +702,32 @@ export default function App() {
 					<section className="trend-section">
 						<h2>Score Trend</h2>
 						{trendData.length > 0 ? (
-							<svg className="trend-chart" viewBox="0 0 300 100" preserveAspectRatio="none">
+							<svg className="trend-chart" viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Average rubric score by session">
+								<title>Average rubric score by session</title>
+								{[1, 2, 3, 4, 5].map(score => (
+									<g key={score}>
+										<line className="trend-grid-line" x1={chart.left} x2={chart.width - chart.right} y1={yFor(score)} y2={yFor(score)} />
+										<text className="trend-axis-tick" x={chart.left - 6} y={yFor(score) + 3} textAnchor="end">{score}</text>
+									</g>
+								))}
+								<line className="trend-axis-line" x1={chart.left} x2={chart.left} y1={chart.top} y2={chart.height - chart.bottom} />
+								<line className="trend-axis-line" x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} />
 								<path
 									className="trend-line"
-									d={`M0,${100 - trendData[0].score * 20} ${trendData.map(d => `L${d.index * 30 + 10},${100 - d.score * 20}`).join(' ')}`}
+									d={trendData.map((d, i) => `${i === 0 ? 'M' : 'L'}${xFor(d.index)},${yFor(d.score)}`).join(' ')}
 									fill="none"
 								/>
 								{trendData.map(d => (
 									<circle
 										key={d.index}
-										cx={d.index * 30 + 10}
-										cy={100 - d.score * 20}
+										cx={xFor(d.index)}
+										cy={yFor(d.score)}
 										r="3"
 										className="trend-point"
 									/>
 								))}
+								<text className="trend-axis-label" x={chart.left + plotWidth / 2} y={chart.height - 5} textAnchor="middle">Sessions (oldest → newest)</text>
+								<text className="trend-axis-label" x="11" y={chart.top + plotHeight / 2} textAnchor="middle" transform={`rotate(-90 11 ${chart.top + plotHeight / 2})`}>Average rubric score (1–5)</text>
 							</svg>
 						) : (
 							<p className="no-data">No sessions yet</p>
