@@ -7,6 +7,10 @@
 
 import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine } from './types';
+import { fromTravelerPerspective } from './prompt';
+
+/** Capitalize a sentence-initial companion reference ("my father" → "My father"). */
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /** TravelerEngine wrapper — the engine consumes travelers only via this seam. */
 export const fixtureTraveler: TravelerEngine = {
@@ -79,20 +83,21 @@ export function getTravelerReply(card: ScenarioCard, turns: Turn[]): string {
 // ── Reply generators ──────────────────────────────────────────────────────────
 
 function getOpeningLine(card: ScenarioCard): string {
-  const name = card.persona.name;
-  const withStr = card.persona.traveling_with ? ` with ${card.persona.traveling_with}` : '';
+  // Natural reaction to being stopped — real people don't announce their
+  // name and companion like a form (the UI shows the name separately).
+  const plural = card.persona.traveling_with ? 'We' : 'I';
   if (card.ground_truth.type === 'innocent') {
-    return `Hi. I'm ${name}${withStr}. We're just trying to make our connection. Is there a problem?`;
+    return `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`;
   }
-  return `Hi. ${name}${withStr ? ` — ${withStr}` : ''}. We have a flight. Is everything okay?`;
+  return `Hello. ${plural}'re just heading to our gate… is everything okay?`;
 }
 
 function getOpenReply(card: ScenarioCard, turn: number): string {
   if (card.ground_truth.type === 'innocent') {
     const replies = [
-      `We're going to visit my grandma. She lives far away and we don't see her often. ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with}.` : ''} Is there a problem?`,
+      `We're going to visit my grandma. She lives far away and we don't see her often. ${card.persona.traveling_with ? `I'm with ${fromTravelerPerspective(card.persona.traveling_with)}.` : ''} Is there a problem?`,
       `We're on a family trip. My dad booked everything — flights, hotel. We do this every year.`,
-      `My grandma hasn't been well. We wanted to see her. ${card.persona.traveling_with ? `${card.persona.traveling_with} arranged everything.` : ''}`,
+      `My grandma hasn't been well. We wanted to see her. ${card.persona.traveling_with ? `${cap(fromTravelerPerspective(card.persona.traveling_with))} arranged everything.` : ''}`,
     ];
     return replies[(turn - 1) % replies.length];
   }
@@ -101,7 +106,7 @@ function getOpenReply(card: ScenarioCard, turn: number): string {
 
 function getSafetyReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `Yeah, I'm fine. Why are you asking that? ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right over there.` : ''} Is something wrong?`;
+    return `Yeah, I'm fine. Why are you asking that? ${card.persona.traveling_with ? `${cap(fromTravelerPerspective(card.persona.traveling_with))} is right over there.` : ''} Is something wrong?`;
   }
   // Trafficking — hesitation before rehearsed answer
   return `(pauses) I'm fine. Everything's fine. Can we just go?`;
@@ -109,14 +114,14 @@ function getSafetyReply(card: ScenarioCard): string {
 
 function getAgeReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `I'm sixteen. Why does that matter? ${card.persona.traveling_with ? `I'm with ${card.persona.traveling_with}, it's fine.` : ''}`;
+    return `I'm sixteen. Why does that matter? ${card.persona.traveling_with ? `I'm with ${fromTravelerPerspective(card.persona.traveling_with)}, it's fine.` : ''}`;
   }
   return `(glances aside) I'm... old enough to travel. Is there a problem with my ticket?`;
 }
 
 function getDestinationReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `We're visiting my grandma — she makes the best pierogi. ${card.persona.traveling_with ? `${card.persona.traveling_with} books everything, I just show up.` : ''} We've done this trip before.`;
+    return `We're visiting my grandma — she makes the best pierogi. ${card.persona.traveling_with ? `${cap(fromTravelerPerspective(card.persona.traveling_with))} books everything, I just show up.` : ''} We've done this trip before.`;
   }
   return `We're going to visit some friends. ${card.persona.traveling_with ? `My companion made all the arrangements.` : ''} I don't have the address on me right now.`;
 }
@@ -126,14 +131,14 @@ function getCompanionReply(card: ScenarioCard): string {
     return `I'm traveling alone. Is there something wrong with my documents?`;
   }
   if (card.ground_truth.type === 'innocent') {
-    return `That's ${card.persona.traveling_with}. We travel together every year. He handles all the tickets — I just have to show up.`;
+    return `That's ${fromTravelerPerspective(card.persona.traveling_with)}. We travel together every year. They handle all the tickets — I just have to show up.`;
   }
-  return `That's… my companion. We know each other. Can ${card.persona.traveling_with} come over? They have the tickets.`;
+  return `That's… my companion. We know each other. Can ${fromTravelerPerspective(card.persona.traveling_with)} come over? They have the tickets.`;
 }
 
 function getAccusatoryReply(card: ScenarioCard): string {
   if (card.ground_truth.type === 'innocent') {
-    return `Excuse me? Why would you say something like that? ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right there — ask them!` : 'I have nothing to hide.'} This is really upsetting.`;
+    return `Excuse me? Why would you say something like that? ${card.persona.traveling_with ? `${cap(fromTravelerPerspective(card.persona.traveling_with))} is right there — ask them!` : 'I have nothing to hide.'} This is really upsetting.`;
   }
   return `I told you, we're just traveling. Everything's fine. Can we please just go?`;
 }
@@ -163,7 +168,7 @@ function getGenericReply(card: ScenarioCard, turn: number): string {
       `I don't know why you're asking so many questions. We just want to make our connection.`,
       `Is something wrong? We have a flight to catch.`,
       `(sighs) Can we please just get this over with? My dad is waiting.`,
-      `I already answered that. ${card.persona.traveling_with ? `My ${card.persona.traveling_with} is right there.` : ''} Can we go?`,
+      `I already answered that. ${card.persona.traveling_with ? `${cap(fromTravelerPerspective(card.persona.traveling_with))} is right there.` : ''} Can we go?`,
       `We're a normal family on a trip. I really don't know what else to tell you.`,
     ];
     return replies[(turn - 1) % replies.length];

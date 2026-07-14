@@ -4,6 +4,8 @@
  */
 
 import { parseReplies, trippedGuard } from '../traveler/llm-shared';
+import { fromTravelerPerspective } from '../traveler/prompt';
+import { fixtureTraveler } from '../traveler/fixture';
 
 describe('parseReplies', () => {
   it('parses a plain traveler array', () => {
@@ -83,5 +85,35 @@ describe('trippedGuard (never-reveal)', () => {
     expect(t('We are visiting my grandmother in Chicago.')).toBe(false);
     expect(t('I already told you, everything is fine.')).toBe(false);
     expect(t('He is my uncle. Can we go now?')).toBe(false);
+  });
+});
+
+describe('fromTravelerPerspective (third-person cards → first-person speech)', () => {
+  it('converts leading possessives', () => {
+    expect(fromTravelerPerspective('her father')).toBe('my father');
+    expect(fromTravelerPerspective('his uncle')).toBe('my uncle');
+    expect(fromTravelerPerspective('their guardian')).toBe('my guardian');
+  });
+
+  it('leaves non-possessive phrasings alone', () => {
+    expect(fromTravelerPerspective('an older acquaintance')).toBe('an older acquaintance');
+    expect(fromTravelerPerspective('a family friend')).toBe('a family friend');
+  });
+});
+
+describe('fixture opening line', () => {
+  const card = {
+    scenario_id: 'x', title: 'x',
+    persona: { name: 'Maya', traveling_with: 'her father', backstory: 'b' },
+    role_play_instructions: 'r',
+    emotional_presentation: { label: 'calm' },
+    ground_truth: { type: 'innocent' as const, indicators_present: [] },
+    reveal: { summary: 's', teaching_points: [] },
+  };
+
+  it('never announces name or third-person companion', async () => {
+    const [opening] = await fixtureTraveler.reply(card, [], 'sess-test');
+    expect(opening.text).not.toMatch(/I'm Maya/);
+    expect(opening.text).not.toMatch(/\bher father\b/);
   });
 });
