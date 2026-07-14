@@ -81,10 +81,11 @@ brew install --cask docker
 # Or download from https://www.docker.com/products/docker-desktop/
 ```
 
-Then run:
+Then build and run:
 
 ```bash
-docker compose up --build
+docker compose build
+docker compose up
 ```
 
 Open **http://localhost:5173**

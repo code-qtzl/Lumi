@@ -1,3 +1,5 @@
+name: lumi
+
 services:
   server:
     build: ./server
@@ -5,6 +7,7 @@ services:
       - '3000:3000'
     volumes:
       - ./shared:/shared:ro
+    container_name: lumi-server
 
   client:
     build: ./client
@@ -16,3 +19,4 @@ services:
       - ./client/src:/app/src
     depends_on:
       - server
+    container_name: lumi-client

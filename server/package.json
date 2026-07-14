@@ -1,5 +1,6 @@
 {
-	"name": "beacon-app-server",
+	"name": "lumi-server",
+	"description": "Lumi server — Express API for training simulator",
 	"version": "1.0.0",
 	"scripts": {
 		"server": "ts-node src/server.ts",
