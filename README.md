@@ -49,8 +49,20 @@ Groq's free tier serves Llama-class models via an OpenAI-compatible endpoint —
 
 ### Option C — Ollama (local, $0)
 
+Install Ollama (once):
+
 ```bash
-# Start Ollama locally (must be running first)
+# macOS
+brew install ollama
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Then download a model and start the server:
+
+```bash
+# Download model (run once)
 ollama pull llama3.3
 
 # In server/.env:
@@ -59,6 +71,17 @@ OLLAMA_MODEL=llama3.3
 ```
 
 ### Option D — Docker
+
+Install Docker Desktop if you don't have it:
+
+```bash
+# macOS
+brew install --cask docker
+
+# Or download from https://www.docker.com/products/docker-desktop/
+```
+
+Then run:
 
 ```bash
 docker compose up --build
