@@ -290,6 +290,7 @@ export default function App() {
 						onClick={handleStartSession}
 						disabled={starting}
 					>
+						<span className="tile-icon" aria-hidden>▶</span>
 						{starting ? 'Starting…' : 'Start Session'}
 					</button>
 					<button
@@ -297,6 +298,7 @@ export default function App() {
 						onClick={handleViewHistory}
 						disabled={!hasHistory}
 					>
+						<span className="tile-icon" aria-hidden>📊</span>
 						View History
 					</button>
 				</div>
