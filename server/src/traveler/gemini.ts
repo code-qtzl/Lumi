@@ -14,7 +14,7 @@ import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine, ReplyTurn } from './types';
 import { fixtureTraveler } from './fixture';
 import { buildSystemPrompt, OPENING_CUE, PROMPT_VERSION } from './prompt';
-import { llmStats, trippedGuard, parseReplies, sleep } from './llm-shared';
+import { hasGenericOpening, llmStats, trippedGuard, parseReplies, sleep } from './llm-shared';
 import { trace } from '../tracing/tracer';
 
 const MODEL = process.env.TRAVELER_MODEL || 'gemini-3.5-flash';
@@ -116,18 +116,26 @@ export function createGeminiTraveler(apiKey: string): TravelerEngine {
       const systemPrompt = buildSystemPrompt(card);
 
       const first = await callGemini(apiKey, systemPrompt, turns, sessionId, 1);
-      if (first && !trippedGuard(first)) return first;
+      const firstGuardTripped = first ? trippedGuard(first) : false;
+      const firstGenericOpening = first && turns.length === 0 ? hasGenericOpening(first) : false;
+      if (first && !firstGuardTripped && !firstGenericOpening) return first;
 
-      if (first && trippedGuard(first)) {
-        llmStats.guard_trips++;
-        trace('traveler.guard_tripped', { session_id: sessionId, replies: first });
+      if (first && (firstGuardTripped || firstGenericOpening)) {
+        if (firstGuardTripped) {
+          llmStats.guard_trips++;
+          trace('traveler.guard_tripped', { session_id: sessionId, replies: first });
+        } else {
+          trace('traveler.generic_opening_retried', { session_id: sessionId, replies: first });
+        }
         // One corrective retry: re-ask with an appended in-character reminder
         const nudged: Turn[] = [
           ...turns,
-          { turn_id: 'nudge', role: 'trainee', text: '(Stay fully in character; answer only as the traveler would, in their own words.)' },
+          { turn_id: 'nudge', role: 'trainee', text: turns.length === 0
+            ? '(Give a varied, natural first-contact line. Do not use a generic concern question such as "Is everything okay?" or "Is something wrong?")'
+            : '(Stay fully in character; answer only as the traveler would, in their own words.)' },
         ];
         const second = await callGemini(apiKey, systemPrompt, nudged, sessionId, 2);
-        if (second && !trippedGuard(second)) return second;
+        if (second && !trippedGuard(second) && !(turns.length === 0 && hasGenericOpening(second))) return second;
       }
 
       // Fall back to the fixture for this turn — session survives, trace records why

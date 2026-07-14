@@ -37,6 +37,22 @@ export function trippedGuard(replies: ReplyTurn[]): boolean {
 }
 
 /**
+ * Opening-only guard: these stock concern questions were overrepresented in
+ * model outputs and make consecutive sessions feel generated from a fixture.
+ */
+const GENERIC_OPENING_PATTERNS = [
+  /\bis everything okay\b/i,
+  /\bis something wrong\b/i,
+  /\bis there (?:a )?problem\b/i,
+  /\bcan i help you\b/i,
+  /\bis there something i can do for you\b/i,
+];
+
+export function hasGenericOpening(replies: ReplyTurn[]): boolean {
+  return replies.some(r => r.role === 'traveler' && GENERIC_OPENING_PATTERNS.some(p => p.test(r.text)));
+}
+
+/**
  * Parse model output into reply turns. Lenient about wrappers: markdown
  * fences, a bare object instead of an array, or an object with a single
  * array-valued key ({"replies": [...]}, which json-object output modes produce).

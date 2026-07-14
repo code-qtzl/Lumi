@@ -89,6 +89,7 @@ function getOpeningLine(card: ScenarioCard): string {
   // name and companion like a form (the UI shows the name separately).
   // Indistinguishable lines for both innocent and trafficking (trainee can't tell)
   const plural = card.persona.traveling_with ? 'We' : 'I';
+  const objectPronoun = card.persona.traveling_with ? 'us' : 'me';
 
   // All opening lines are indistinguishable - same set for both types
   const openingLines = [
@@ -96,16 +97,16 @@ function getOpeningLine(card: ScenarioCard): string {
     'Hello.',
     'Good morning.',
     'Good afternoon.',
-    `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`,
-    `Excuse me, can I help you? ${plural}'re just trying to catch our flight.`,
-    `Is there something wrong? We have a connection to make.`,
-    `Sorry, are we in the way? We're trying to get to our gate.`,
-    'Here is my passport.',
-    'Here are my documents and my landing card.',
-    'Hi, I am here for a business trip.',
-    'I am visiting family. Here is their address.',
-    'Can I help you?',
-    'Is there something I can do for you?',
+    `Sorry — should ${plural.toLowerCase()} wait here?`,
+    `Oh, did you need to speak with ${objectPronoun}?`,
+    `Sorry, ${plural.toLowerCase()} were heading toward the gate.`,
+    `Excuse me — are ${plural.toLowerCase()} meant to stop here?`,
+    `We’re a little tight on time for boarding.`,
+    `Sorry, did I miss an instruction?`,
+    `One moment — should ${plural.toLowerCase()} step aside?`,
+    'Yes?',
+    'Hi — what do you need?',
+    'Sorry, I was just making my way to the gate.',
   ];
 
   // Each option has the same probability; do not derive this from turn count

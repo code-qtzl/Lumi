@@ -3,7 +3,7 @@
  * pure functions that gate everything a trainee sees from the model.
  */
 
-import { parseReplies, trippedGuard } from '../traveler/llm-shared';
+import { hasGenericOpening, parseReplies, trippedGuard } from '../traveler/llm-shared';
 import { buildSystemPrompt, fromTravelerPerspective } from '../traveler/prompt';
 import { fixtureTraveler } from '../traveler/fixture';
 
@@ -88,6 +88,17 @@ describe('trippedGuard (never-reveal)', () => {
   });
 });
 
+describe('hasGenericOpening', () => {
+  it('rejects repeated generic concern-question openings', () => {
+    expect(hasGenericOpening([{ role: 'traveler', text: 'Is everything okay? We are trying to catch our flight.' }])).toBe(true);
+    expect(hasGenericOpening([{ role: 'traveler', text: 'Is something wrong?' }])).toBe(true);
+  });
+
+  it('allows a specific, natural first-contact line', () => {
+    expect(hasGenericOpening([{ role: 'traveler', text: 'Sorry — should we wait here?' }])).toBe(false);
+  });
+});
+
 describe('fromTravelerPerspective (third-person cards → first-person speech)', () => {
   it('converts leading possessives', () => {
     expect(fromTravelerPerspective('her father')).toBe('my father');
@@ -116,6 +127,7 @@ describe('role-play prompt', () => {
     expect(prompt).toContain('airport personnel or an immigration officer');
     expect(prompt).toContain('not a scripted border declaration');
     expect(prompt).toContain('documents, trip purpose, or a companion description unless the interviewer first asks');
+    expect(prompt).toContain('never use "Is everything okay?", "Is something wrong?", "Is there a problem?", or "Can I help you?"');
   });
 
   it('forbids hidden-scenario framing and suspicious companion wording', () => {
@@ -149,7 +161,7 @@ describe('fixture opening line', () => {
       const [first] = await fixtureTraveler.reply(card, [], 'sess-test');
       const [last] = await fixtureTraveler.reply(card, [], 'sess-test');
       expect(first.text).toBe('Hi.');
-      expect(last.text).toBe('Is there something I can do for you?');
+      expect(last.text).toBe('Sorry, I was just making my way to the gate.');
     } finally {
       random.mockRestore();
     }
