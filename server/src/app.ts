@@ -5,6 +5,7 @@ import scenariosRouter from './routes/scenarios';
 import { sessionsRouter } from './routes/sessions';
 import { tracesRouter } from './routes/traces';
 import { feedbackRouter } from './routes/feedback';
+import { historyRouter } from './routes/history';
 import { loadScenarioCards } from './scenarios/registry';
 
 const app = express();
@@ -48,6 +49,7 @@ if (process.env.NODE_ENV !== 'production' || process.env.DEV_TRACES === '1') {
 
 app.use('/api/sessions/:id/feedback', feedbackRouter);
 app.use('/api/sessions', limitSessionCreate, sessionsRouter);
+app.use('/api/history', historyRouter);
 
 // Priority 8 — Global error handler: catches unhandled throws and returns
 // clean JSON instead of leaking stack traces to the client.
