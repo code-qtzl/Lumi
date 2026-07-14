@@ -13,7 +13,7 @@ not here). This file covers coding practice only.
   `cd server && npm run typecheck && npm test && npm run eval`.
 
 ## Working agreements
-
+- Before making any code changes, read docs/lumi-product-vision.md in full and follow them throughout the task.
 - Plan before multi-file changes; wait for go-ahead.
 - Verify with real command output; never assert unverified success.
 - Fix root causes; never weaken or skip a check/test to make it pass.
