@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "beacon/scenario-card",
+	"$id": "lumi/scenario-card",
 	"title": "Scenario card",
 	"description": "One practice scenario. 'ground_truth' and 'reveal' are hidden from the trainee until the debrief.",
 	"type": "object",

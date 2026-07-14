@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "beacon/transcript",
+	"$id": "lumi/transcript",
 	"title": "Session transcript",
 	"description": "One completed practice session. turn_ids are stable and are the anchor targets for all feedback claims.",
 	"type": "object",

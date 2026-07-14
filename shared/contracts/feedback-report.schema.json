@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "beacon/feedback-report",
+	"$id": "lumi/feedback-report",
 	"title": "Feedback report",
 	"description": "Rubric-scored feedback on ONE session. Every dimension score must carry anchors (turn_ids). This object is what the eval harness judges for faithfulness.",
 	"type": "object",
