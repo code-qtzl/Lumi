@@ -85,11 +85,48 @@ export function getTravelerReply(card: ScenarioCard, turns: Turn[]): string {
 function getOpeningLine(card: ScenarioCard): string {
   // Natural reaction to being stopped — real people don't announce their
   // name and companion like a form (the UI shows the name separately).
+  // Variety: simple greetings, airport staff addressed, immigration officer addressed
   const plural = card.persona.traveling_with ? 'We' : 'I';
+  const isWithCompanion = !!card.persona.traveling_with;
+
+  // Simple greetings (most common)
+  const simpleGreetings = [
+    'Hi.',
+    'Hello.',
+    'Good morning.',
+    'Good afternoon.',
+  ];
+
+  // Airport staff addressed
+  const airportStaffLines = [
+    `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`,
+    `Excuse me, can I help you? ${plural}'re just trying to catch our flight.`,
+    `Is there something wrong? We have a connection to make.`,
+    `Sorry, are we in the way? We're trying to get to our gate.`,
+  ];
+
+  // Immigration officer addressed
+  const immigrationLines = [
+    `Good morning, officer. Is there something I can help you with?`,
+    `Hello. ${plural}'re just heading to our gate… is everything okay?`,
+    `Good afternoon. Is there a problem with our documents?`,
+    `Officer, we're just trying to make our connection. Is something wrong?`,
+  ];
+
+  // Innocent travelers
   if (card.ground_truth.type === 'innocent') {
-    return `Hi — sorry, is there a problem? ${plural}'re trying to make a connection.`;
+    const allLines = [...simpleGreetings, ...airportStaffLines, ...immigrationLines];
+    return allLines[Math.floor(Math.random() * allLines.length)];
   }
-  return `Hello. ${plural}'re just heading to our gate… is everything okay?`;
+
+  // Trafficking - more evasive, less cooperative
+  const traffickingLines = [
+    `Hello. ${plural}'re just heading to our gate… is everything okay?`,
+    `Good morning. We have a flight to catch.`,
+    `We're just trying to get through. Is there a problem?`,
+    `(quietly) Can we please just go? We don't want any trouble.`,
+  ];
+  return traffickingLines[Math.floor(Math.random() * traffickingLines.length)];
 }
 
 function getOpenReply(card: ScenarioCard, turn: number): string {

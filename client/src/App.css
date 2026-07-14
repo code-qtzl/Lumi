@@ -61,6 +61,7 @@
 	font-weight: 600;
 	cursor: pointer;
 	transition: opacity 0.15s;
+	color: var(--color-text);
 }
 
 .btn:disabled {
