@@ -90,6 +90,8 @@ docker compose up
 
 Open **http://localhost:5173**
 
+> **Note:** Docker runs in fixture mode by default (no API key needed). The server and client containers are named `lumi-server` and `lumi-client`.
+
 ---
 
 ## How It Works
