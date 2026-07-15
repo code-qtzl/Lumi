@@ -15,9 +15,11 @@ import { getScenarioCard, listScenarios } from '../scenarios/registry';
 
 export const sessionsRouter = Router();
 
-/** Engine errors are 'Session not found' or a state conflict (cap / already completed). */
+/** Engine errors: not-found → 404, model unavailability → 503 (retryable), state conflicts → 409. */
 function errorStatus(error: string): number {
-  return error === 'Session not found' ? 404 : 409;
+  if (error === 'Session not found') return 404;
+  if (error.includes('model temporarily unavailable')) return 503;
+  return 409;
 }
 
 sessionsRouter.post('/', async (req, res) => {
@@ -48,7 +50,12 @@ sessionsRouter.post('/', async (req, res) => {
     card = getScenarioCard(pick.scenario_id)!;
   }
 
-  const session = await createSession(card, mode || 'text');
+  let session;
+  try {
+    session = await createSession(card, mode || 'text');
+  } catch {
+    return res.status(503).json({ error: 'Could not start the session — the traveler model is temporarily unavailable. Please try again.' });
+  }
   // Hide which scenario was assigned: the id/title alone can reveal the
   // archetype ("coached-companion"). Echo it only when explicitly requested.
   const { scenario_id: assigned, ...hidden } = session;

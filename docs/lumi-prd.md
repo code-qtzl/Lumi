@@ -215,7 +215,7 @@ captions") available in settings; the debrief always shows the full transcript.
 | 4 — Both archetypes E2E | ✅ | blind assignment draws from the full pool; debrief incl. FP-discipline feedback on innocent scenarios |
 | 5 — Modeled alternatives | ✅ enforced | every dimension ≤3 carries an alternative tied to a flagged turn; gated in `npm run eval` |
 | 6 — Session mechanics | ✅ tested | decision gate survives the 30-turn hard cap; nudge at 20; unit + route tests |
-| 7 — Fixture mode | ✅ | full journey keyless; fixture is also the per-turn fallback so a live session never dies on an LLM failure |
+| 7 — Fixture mode | ✅ | full journey keyless; fixture is a startup-selected engine only — on live-model failure the turn surfaces a retryable error (rolled back, never silently canned) |
 | 8 — Voice out | ⬜ descoped | team decision 7/13; F8 fallback design makes text-only a first-class state |
 
 Additional v1 evals beyond the ACs: live never-reveal suite (10/10 adversarial

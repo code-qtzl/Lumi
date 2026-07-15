@@ -261,3 +261,47 @@ describe('Session Mechanics', () => {
     });
   });
 });
+
+// ── Model unavailability is surfaced, never silently canned ─────────────────
+
+describe('traveler unavailable (no silent fixture fallback)', () => {
+  it('rolls back the trainee turn, returns a retryable error, session stays live', async () => {
+    let failNext = true;
+    setTraveler({
+      name: 'flaky-fake',
+      reply: async (card, turns) => {
+        if (turns.length === 0) return [{ role: 'traveler', text: 'Opening.' }];
+        if (failNext) { failNext = false; throw new Error('Traveler model unavailable: HTTP 429 after 4 attempts'); }
+        return [{ role: 'traveler', text: 'Real reply.' }];
+      },
+    });
+
+    try {
+      const session = await createSession(testCard, 'text');
+      const turnsBefore = getSessionView(session.session_id);
+      if ('error' in turnsBefore) throw new Error('view failed');
+
+      const failed = await submitTurn(session.session_id, 'Where are you headed?');
+      expect('error' in failed).toBe(true);
+      if (!('error' in failed)) return;
+      expect(failed.error).toMatch(/temporarily unavailable/i);
+
+      // Trainee turn rolled back — no orphaned turn in the session
+      const viewAfterFail = getSessionView(session.session_id);
+      if ('error' in viewAfterFail) throw new Error('view failed');
+      expect(viewAfterFail.turns.length).toBe(turnsBefore.turns.length);
+      expect(viewAfterFail.status).toBe('active');
+
+      // Resend succeeds and turn ids stay contiguous
+      const retried = await submitTurn(session.session_id, 'Where are you headed?');
+      expect('error' in retried).toBe(false);
+      if ('error' in retried) return;
+      expect(retried.traveler_turns[0].text).toBe('Real reply.');
+      const ids = getSessionView(session.session_id);
+      if ('error' in ids) throw new Error('view failed');
+      expect(ids.turns.map(t => t.turn_id)).toEqual(ids.turns.map((_, i) => `t${String(i + 1).padStart(3, '0')}`));
+    } finally {
+      setTraveler(fixtureTraveler);
+    }
+  });
+});

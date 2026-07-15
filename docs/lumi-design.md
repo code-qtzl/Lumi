@@ -39,7 +39,7 @@ leaves the machine at all).
 
 | Call | When | Model (v1 actual) | Temp | Output guard |
 |---|---|---|---|---|
-| Role-play turn | online, per turn | Groq `llama-3.3-70b-versatile` (pinned via env; local Ollama or fixture as fallbacks) | 0.8 | json-mode output; never-reveal regex guard with one corrective retry; per-turn fixture fallback (session never dies); prompt version in every trace |
+| Role-play turn | online, per turn | Groq `llama-3.3-70b-versatile` (pinned via env; local Ollama or fixture as fallbacks) | 0.8 | json-mode output; never-reveal regex guard with one corrective retry; up to 4 attempts with Retry-After backoff, then a retryable 503 to the trainee (turn rolled back — no silent fixture substitution); prompt version in every trace |
 | Feedback report | per session end | **no model call in v1** — rule-based scorer (transcript + card + rubric → report) | — | JSON schema + anchor validator + AC5 modeled-alternatives gate; LLM scorer is the planned escalation if agreement stalls on real transcripts |
 | Variation generation | offline batch | same provider chain as role-play | 1.0 | schema (ajv) + invariance check + title-leak gate; human read before shipping |
 | Reference labels | offline | hand-crafted + team-reviewed (two labels corrected during review) | — | AC2 review step |

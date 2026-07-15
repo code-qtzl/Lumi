@@ -1,36 +1,42 @@
-import { createMixedTraveler } from '../traveler';
-import { ScenarioCard, Turn } from '../contracts';
-import { TravelerEngine } from '../traveler/types';
+import { getTraveler, setTraveler } from '../traveler';
 
-const card: ScenarioCard = {
-  scenario_id: 'selection-test',
-  title: 'Selection test',
-  persona: { name: 'Maya', traveling_with: '', backstory: 'Test backstory' },
-  role_play_instructions: 'Stay in character.',
-  emotional_presentation: { label: 'calm' },
-  ground_truth: { type: 'innocent', indicators_present: [] },
-  reveal: { summary: 'Test.', teaching_points: [] },
-};
-const turns: Turn[] = [];
+/**
+ * A configured model traveler answers EVERY turn — there is no per-turn
+ * random routing to the fixture (a 75/25 "mix lane" once shipped canned,
+ * context-blind replies into live sessions; this pins its removal).
+ * The fixture is selected only when no model key is configured (F7).
+ */
+describe('traveler selection', () => {
+  const ENV_KEYS = ['GROQ_API_KEY', 'OLLAMA_MODEL', 'OPENAI_API_KEY', 'TRAVELER_API_KEY', 'TRAVELER_API_BASE', 'GEMINI_API_KEY'] as const;
+  let saved: Record<string, string | undefined>;
 
-describe('model / fixture traveler mix', () => {
-  const model: TravelerEngine = {
-    name: 'model-test',
-    reply: async () => [{ role: 'traveler', text: 'From the model.' }],
-  };
+  beforeEach(() => {
+    saved = Object.fromEntries(ENV_KEYS.map(k => [k, process.env[k]]));
+    for (const k of ENV_KEYS) delete process.env[k];
+    setTraveler(null); // reset the cached engine
+  });
 
-  it('routes values below 0.75 to the model and the remainder to the fixture', async () => {
-    const mixed = createMixedTraveler(model);
-    const random = vi.spyOn(Math, 'random');
-    random.mockReturnValueOnce(0.749999).mockReturnValueOnce(0.75);
-    try {
-      await expect(mixed.reply(card, turns, 'sess-test')).resolves.toEqual([
-        { role: 'traveler', text: 'From the model.' },
-      ]);
-      const fixtureReply = await mixed.reply(card, turns, 'sess-test');
-      expect(fixtureReply[0].text).not.toBe('From the model.');
-    } finally {
-      random.mockRestore();
+  afterEach(() => {
+    for (const k of ENV_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
     }
+    setTraveler(null);
+  });
+
+  it('uses the model engine directly when a key is configured — no mix wrapper', () => {
+    process.env.GROQ_API_KEY = 'test-key';
+    const engine = getTraveler();
+    expect(engine.name).toBe('groq:llama-3.3-70b-versatile');
+    expect(engine.name).not.toMatch(/^mix-/);
+  });
+
+  it('selects Ollama when configured without Groq', () => {
+    process.env.OLLAMA_MODEL = 'llama3.3';
+    expect(getTraveler().name).toBe('ollama:llama3.3');
+  });
+
+  it('falls back to the fixture engine only when keyless', () => {
+    expect(getTraveler().name).toBe('fixture');
   });
 });

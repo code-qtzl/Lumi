@@ -8,6 +8,19 @@ import { ReplyTurn } from './types';
 
 /** Observability for probes/tests: how often the LLM path degraded. */
 export const llmStats = { calls: 0, http_failures: 0, parse_failures: 0, guard_trips: 0, fallbacks: 0 };
+
+/**
+ * Thrown when the live model cannot produce a usable reply after retries.
+ * Live sessions surface this to the trainee as a retryable error — the
+ * traveler NEVER silently degrades to canned fixture lines mid-session
+ * (fixture is an engine you select by running keyless, not a fallback).
+ */
+export class TravelerUnavailableError extends Error {
+  constructor(reason: string) {
+    super(`Traveler model unavailable: ${reason}`);
+    this.name = 'TravelerUnavailableError';
+  }
+}
 export function resetLlmStats(): void {
   llmStats.calls = 0;
   llmStats.http_failures = 0;

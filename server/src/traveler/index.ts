@@ -18,23 +18,6 @@ import { createOpenAITraveler } from './openai';
 import { createOpenAiCompatTraveler } from './openai-compat';
 
 let traveler: TravelerEngine | null = null;
-const MODEL_REPLY_RATE = 0.75;
-
-/**
- * Gives configured model travelers most turns while retaining a small fixture
- * lane for deterministic demo variety. Fixture mode itself remains keyless.
- */
-export function createMixedTraveler(modelTraveler: TravelerEngine): TravelerEngine {
-  return {
-    name: `mix-${Math.round(MODEL_REPLY_RATE * 100)}:${modelTraveler.name}`,
-    reply(card, turns, sessionId) {
-      return Math.random() < MODEL_REPLY_RATE
-        ? modelTraveler.reply(card, turns, sessionId)
-        : fixtureTraveler.reply(card, turns, sessionId);
-    },
-  };
-}
-
 export function getTraveler(): TravelerEngine {
   if (traveler) return traveler;
 
@@ -69,7 +52,11 @@ export function getTraveler(): TravelerEngine {
     modelTraveler = createGeminiTraveler(GEMINI_API_KEY);
   }
 
-  traveler = modelTraveler ? createMixedTraveler(modelTraveler) : fixtureTraveler;
+  // The model traveler IS the traveler when a key is configured. The fixture
+  // is only the keyless engine (F7) — never mixed into live sessions
+  // (a per-turn "fixture lane" produced canned, context-blind replies mid-
+  // conversation; removed deliberately).
+  traveler = modelTraveler ?? fixtureTraveler;
 
   console.log(`[traveler] engine: ${traveler.name}`);
   return traveler;

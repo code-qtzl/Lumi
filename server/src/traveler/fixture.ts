@@ -1,8 +1,8 @@
 /**
  * Fixture traveler — produces canned replies from the scenario card.
  *
- * Used for dev, testing, and demo fallback (F7 in PRD), and as the safe
- * per-turn fallback when the LLM traveler errors.
+ * Used for dev, testing, and keyless demo mode (F7 in PRD). Selected only
+ * at startup when no model key is configured — never substituted mid-session.
  */
 
 import { ScenarioCard, Turn } from '../contracts';

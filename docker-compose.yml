@@ -5,6 +5,10 @@ services:
     build: ./server
     ports:
       - '3000:3000'
+    # Model keys — without this the container runs the canned fixture traveler
+    env_file:
+      - path: ./server/.env
+        required: false
     volumes:
       - ./shared:/shared:ro
     container_name: lumi-server

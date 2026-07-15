@@ -12,9 +12,8 @@
 
 import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine, ReplyTurn } from './types';
-import { fixtureTraveler } from './fixture';
 import { buildSystemPrompt, OPENING_CUE, PROMPT_VERSION } from './prompt';
-import { hasGenericOpening, llmStats, trippedGuard, parseReplies, sleep } from './llm-shared';
+import { hasGenericOpening, llmStats, trippedGuard, parseReplies, sleep, TravelerUnavailableError } from './llm-shared';
 import { trace } from '../tracing/tracer';
 
 const TIMEOUT_MS = 10_000;
@@ -53,8 +52,11 @@ async function callChatCompletions(cfg: OpenAiCompatConfig, systemPrompt: string
     ...PARAMS,
   };
 
-  // One rate-limit retry honoring Retry-After when present.
-  for (let fetchTry = 1; fetchTry <= 2; fetchTry++) {
+  // Rate limits are the normal case on free tiers: retry up to 3 times with
+  // escalating waits (Retry-After honored) before giving up. Latency beats a
+  // canned reply — the traveler must always be the real model.
+  const MAX_TRIES = 4;
+  for (let fetchTry = 1; fetchTry <= MAX_TRIES; fetchTry++) {
     llmStats.calls++;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -77,31 +79,45 @@ async function callChatCompletions(cfg: OpenAiCompatConfig, systemPrompt: string
         response: rawText ?? json,
       });
 
-      if (res.status === 429 && fetchTry === 1) {
-        const retryAfter = parseFloat(res.headers.get('retry-after') ?? '');
-        await sleep(Math.min(Number.isFinite(retryAfter) ? retryAfter * 1000 : 10_000, 30_000));
-        continue;
-      }
-      if (!res.ok || !rawText) {
+      if (!res.ok) {
         llmStats.http_failures++;
-        return null;
+        if (fetchTry < MAX_TRIES) {
+          const retryAfter = parseFloat(res.headers.get('retry-after') ?? '');
+          const wait = res.status === 429
+            ? Math.min(Number.isFinite(retryAfter) ? retryAfter * 1000 : 6_000 * fetchTry, 20_000)
+            : 2_000 * fetchTry;
+          await sleep(wait);
+          continue;
+        }
+        throw new TravelerUnavailableError(`HTTP ${res.status} after ${MAX_TRIES} attempts`);
+      }
+      if (!rawText) {
+        llmStats.http_failures++;
+        if (fetchTry < MAX_TRIES) continue;
+        throw new TravelerUnavailableError('empty completion');
       }
       const replies = parseReplies(rawText);
-      if (!replies) llmStats.parse_failures++;
+      if (!replies) {
+        llmStats.parse_failures++;
+        if (fetchTry < MAX_TRIES) continue;
+        throw new TravelerUnavailableError('unparseable completion');
+      }
       return replies;
     } catch (err) {
+      if (err instanceof TravelerUnavailableError) throw err;
       trace('traveler.llm_error', { session_id: sessionId, attempt, fetch_try: fetchTry, error: String(err), provider: cfg.label }, {
         prompt_version: PROMPT_VERSION,
         model: cfg.model,
         params: PARAMS,
       });
       llmStats.http_failures++;
-      return null;
+      if (fetchTry >= MAX_TRIES) throw new TravelerUnavailableError(`network/timeout after ${MAX_TRIES} attempts`);
+      await sleep(2_000 * fetchTry);
     } finally {
       clearTimeout(timer);
     }
   }
-  return null;
+  throw new TravelerUnavailableError('retries exhausted');
 }
 
 export function createOpenAiCompatTraveler(cfg: OpenAiCompatConfig): TravelerEngine {
@@ -132,9 +148,10 @@ export function createOpenAiCompatTraveler(cfg: OpenAiCompatConfig): TravelerEng
         if (second && !trippedGuard(second) && !(turns.length === 0 && hasGenericOpening(second))) return second;
       }
 
-      llmStats.fallbacks++;
-      trace('traveler.fallback_to_fixture', { session_id: sessionId });
-      return fixtureTraveler.reply(card, turns, sessionId);
+      // No silent fixture fallback: the fixture is the engine you get by
+      // running keyless (F7), never a mid-session substitute for the model.
+      trace('traveler.unavailable', { session_id: sessionId });
+      throw new TravelerUnavailableError('reply failed character checks after corrective retry');
     },
   };
 }

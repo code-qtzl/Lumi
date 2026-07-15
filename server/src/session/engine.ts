@@ -156,7 +156,20 @@ export async function submitTurn(sessionId: string, text: string): Promise<Submi
   // seconds; the trainee may commit a decision (or hit the cap) meanwhile —
   // re-check status after the await and drop the stale reply rather than
   // mutating a session that is no longer interviewable.
-  const replies = await getTraveler().reply(state.scenario_card, state.turns, sessionId);
+  let replies;
+  try {
+    replies = await getTraveler().reply(state.scenario_card, state.turns, sessionId);
+  } catch (err) {
+    // Model unavailable after retries: roll the trainee turn back so a resend
+    // doesn't duplicate it, and surface a retryable error. The traveler never
+    // silently degrades to canned lines mid-session.
+    if (state.turns[state.turns.length - 1]?.turn_id === traineeTurn.turn_id) {
+      state.turns.pop();
+    }
+    setSession(sessionId, state);
+    trace('session.turn_failed', { session_id: sessionId, error: String(err) });
+    return { error: 'The traveler did not respond (model temporarily unavailable). Please send your question again.' };
+  }
   if (state.status !== 'active' && state.status !== 'nudged') {
     trace('session.stale_reply_dropped', { session_id: sessionId, status: state.status });
     return {

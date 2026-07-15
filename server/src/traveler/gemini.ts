@@ -12,9 +12,8 @@
 
 import { ScenarioCard, Turn } from '../contracts';
 import { TravelerEngine, ReplyTurn } from './types';
-import { fixtureTraveler } from './fixture';
 import { buildSystemPrompt, OPENING_CUE, PROMPT_VERSION } from './prompt';
-import { hasGenericOpening, llmStats, trippedGuard, parseReplies, sleep } from './llm-shared';
+import { hasGenericOpening, llmStats, trippedGuard, parseReplies, sleep, TravelerUnavailableError } from './llm-shared';
 import { trace } from '../tracing/tracer';
 
 const MODEL = process.env.TRAVELER_MODEL || 'gemini-3.5-flash';
@@ -138,10 +137,10 @@ export function createGeminiTraveler(apiKey: string): TravelerEngine {
         if (second && !trippedGuard(second) && !(turns.length === 0 && hasGenericOpening(second))) return second;
       }
 
-      // Fall back to the fixture for this turn — session survives, trace records why
-      llmStats.fallbacks++;
-      trace('traveler.fallback_to_fixture', { session_id: sessionId });
-      return fixtureTraveler.reply(card, turns, sessionId);
+      // No silent fixture fallback (see openai-compat.ts): surface the failure
+      // so the trainee can retry against the real model.
+      trace('traveler.unavailable', { session_id: sessionId });
+      throw new TravelerUnavailableError('Gemini reply failed after retries');
     },
   };
 }
