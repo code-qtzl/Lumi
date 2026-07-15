@@ -94,6 +94,18 @@ Open **http://localhost:5174**
 
 ---
 
+## Known limitations (hackathon build)
+
+- **Free-tier rate limits.** Live sessions run on Groq's free tier (12k
+  tokens/min). Under sustained load a turn can be rate-limited: you'll see
+  "traveler temporarily unavailable — send your question again." This is by
+  design — Lumi never substitutes canned replies mid-session, because scored
+  feedback must reflect a real model conversation. A paid key to a
+  higher-tier model removes the ceiling with no code changes (the provider
+  is an env-level seam: Groq / OpenAI / any OpenAI-compatible host / Gemini),
+  and local Ollama runs with no rate limits at all.
+- Voice output is designed but descoped for v1 (see `docs/lumi-prd.md`).
+
 ## How It Works
 
 ```
@@ -102,9 +114,13 @@ Start a session  →  Interview the traveler  →  Make a decision  →  See you
 
 | Step | What happens |
 |---|---|
-| **Session chat** | Type questions; the AI traveler responds based on their persona and backstory |
+| **Home** | Cover page with two actions: **Start Session** and **View History**. Scenarios are assigned blind — the trainee never sees or picks what they're walking into (even the title is withheld until the debrief) |
+| **Session workspace** | Three-panel layout: **training tips** (left — what to pay attention to, drawn from the indicator catalog and rubric), the **interview chat** (center), and a **notes pad** (right, autosaved per session). Soft nudge at 20 questions, hard stop at 30 — but the session only ends with your decision |
 | **Decision** | Type an optional reason, then click **No Action** or **Refer** |
-| **Debrief** | Rubric scores (1–5) across 5 dimensions, decision outcome, and teaching points |
+| **Debrief** | Rubric scores (1–5) across 5 dimensions — every claim links to the exact transcript moment (clickable anchors), **better questions you could have asked** at each flagged turn, the full transcript, and the scenario reveal |
+| **Training History** | Calendar of practice days, totals, correct-decision rate, and a score trend across sessions — reachable from Home or straight from any debrief |
+
+Dark and light themes are supported throughout (toggle in the header).
 
 ---
 

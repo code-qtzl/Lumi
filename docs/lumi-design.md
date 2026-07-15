@@ -59,7 +59,10 @@ leaves the machine at all).
    the Groq candidate passed the differential-behavior probe and the never-reveal
    suite (10/10 adversarial turns) before adoption. Local Ollama added as the $0
    offline lane; the provider seam makes any OpenAI-compatible host a config
-   change.
+   change. Residual limitation, accepted for the hackathon: free-tier
+   token-per-minute caps can briefly rate-limit a live turn (surfaced to the
+   trainee as a visible retry, never a canned substitute); a paid key to a
+   higher-tier model removes the ceiling with zero code changes.
 2. **Scorer accuracy vs. scorer cost/speed.** The debrief has a 30s budget, not a
    2s one — so the scorer can use a stronger, slower model than the traveler if
    agreement stalls below 80%. A build-time-free accuracy lever; costs stay in
