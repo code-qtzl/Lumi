@@ -1,6 +1,6 @@
 # Lumi — Training Simulator
 
-An AI-powered training simulator for frontline professionals to practice recognising human trafficking behavioral indicators through role-play scenarios. Built for the [**Call for Code AI Hackathon**](https://hackathon.austinaihub.org/#workshop-resources).
+An AI-powered training simulator for frontline professionals to practice recognizing human trafficking behavioral indicators through role-play scenarios. Built for the [**Call for Code AI Hackathon**](https://hackathon.austinaihub.org/#workshop-resources).
 
 A trainee conducts a text interview with an AI-played traveler persona. When ready, they commit a **refer** or **no action** decision and receive a scored debrief across 5 rubric dimensions.
 
