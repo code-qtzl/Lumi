@@ -209,3 +209,53 @@ describe('DELETE /scenarios/:id', () => {
 		expect(res.body).toHaveProperty('error');
 	});
 });
+
+// ── Authoring gate (production) ───────────────────────────────────────────────
+
+describe('authoring in production', () => {
+	async function inProduction(fn: () => Promise<void>) {
+		const prev = {
+			NODE_ENV: process.env.NODE_ENV,
+			AUTHORING_TOKEN: process.env.AUTHORING_TOKEN,
+			SESSION_SECRET: process.env.SESSION_SECRET,
+		};
+		process.env.NODE_ENV = 'production';
+		process.env.AUTHORING_TOKEN = 'author-secret';
+		// identity.ts refuses to sign cookies in production without a secret
+		process.env.SESSION_SECRET = 'test-secret';
+		try {
+			await fn();
+		} finally {
+			for (const [key, value] of Object.entries(prev)) {
+				if (value === undefined) delete process.env[key];
+				else process.env[key] = value;
+			}
+		}
+	}
+
+	it('rejects POST and DELETE without the token', () =>
+		inProduction(async () => {
+			const post = await request(app).post('/api/scenarios').send(VALID_NEW_SCENARIO);
+			const del = await request(app).delete(`/api/scenarios/${SEED_ID}`);
+			expect(post.status).toBe(401);
+			expect(del.status).toBe(401);
+		}));
+
+	it('rejects a wrong token and leaves the pool untouched', () =>
+		inProduction(async () => {
+			const before = await poolSize();
+			const del = await request(app)
+				.delete(`/api/scenarios/${SEED_ID}`)
+				.set('Authorization', 'Bearer wrong-secret!');
+			expect(del.status).toBe(401);
+			expect(await poolSize()).toBe(before);
+		}));
+
+	it('accepts the correct token', () =>
+		inProduction(async () => {
+			const del = await request(app)
+				.delete(`/api/scenarios/${SEED_ID}`)
+				.set('Authorization', 'Bearer author-secret');
+			expect(del.status).toBe(204);
+		}));
+});

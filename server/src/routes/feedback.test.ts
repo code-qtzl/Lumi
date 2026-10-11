@@ -4,19 +4,23 @@ import app from '../app';
 import { __resetForTesting as resetSessions } from '../session/store';
 import { __resetForTesting as resetReports } from '../feedback/store';
 
+// One cookie-carrying agent per test = one trainee (identity.ts).
+let agent: ReturnType<typeof request.agent>;
+
 beforeEach(() => {
   resetSessions();
   resetReports();
+  agent = request.agent(app);
 });
 
 /** Creates a session and immediately ends it, returning the session_id. */
 async function completedSession(decision: 'refer' | 'no_action' = 'no_action'): Promise<string> {
-  const create = await request(app)
+  const create = await agent
     .post('/api/sessions')
     .send({ scenario_id: 'father-daughter-holiday' });
   const sessionId: string = create.body.session_id;
 
-  await request(app)
+  await agent
     .post(`/api/sessions/${sessionId}/end`)
     .send({ decision, stated_reason: 'Test run' });
 
@@ -28,7 +32,7 @@ async function completedSession(decision: 'refer' | 'no_action' = 'no_action'): 
 describe('POST /api/sessions/:id/feedback', () => {
   it('returns 201 with a valid FeedbackReport for a completed session', async () => {
     const id = await completedSession('no_action');
-    const res = await request(app).post(`/api/sessions/${id}/feedback`);
+    const res = await agent.post(`/api/sessions/${id}/feedback`);
 
     expect(res.status).toBe(201);
     expect(res.body.report_id).toBe(`rpt-${id}`);
@@ -39,7 +43,7 @@ describe('POST /api/sessions/:id/feedback', () => {
 
   it('report contains all 5 rubric dimensions with scores in range 1–5', async () => {
     const id = await completedSession();
-    const res = await request(app).post(`/api/sessions/${id}/feedback`);
+    const res = await agent.post(`/api/sessions/${id}/feedback`);
 
     expect(res.body.dimensions).toHaveLength(5);
     for (const dim of res.body.dimensions) {
@@ -52,7 +56,7 @@ describe('POST /api/sessions/:id/feedback', () => {
 
   it('report contains a decision_outcome reflecting the trainee decision', async () => {
     const id = await completedSession('no_action');
-    const res = await request(app).post(`/api/sessions/${id}/feedback`);
+    const res = await agent.post(`/api/sessions/${id}/feedback`);
 
     expect(res.body.decision_outcome.trainee_decision).toBe('no_action');
     expect(res.body.decision_outcome.ground_truth_type).toBe('innocent');
@@ -61,7 +65,7 @@ describe('POST /api/sessions/:id/feedback', () => {
 
   it('appropriate is false when trainee makes the wrong decision', async () => {
     const id = await completedSession('refer'); // innocent scenario — refer is wrong
-    const res = await request(app).post(`/api/sessions/${id}/feedback`);
+    const res = await agent.post(`/api/sessions/${id}/feedback`);
 
     expect(res.body.decision_outcome.trainee_decision).toBe('refer');
     expect(res.body.decision_outcome.appropriate).toBe(false);
@@ -69,26 +73,26 @@ describe('POST /api/sessions/:id/feedback', () => {
 
   it('is idempotent — calling twice returns the same report_id and 200', async () => {
     const id = await completedSession();
-    await request(app).post(`/api/sessions/${id}/feedback`);
-    const second = await request(app).post(`/api/sessions/${id}/feedback`);
+    await agent.post(`/api/sessions/${id}/feedback`);
+    const second = await agent.post(`/api/sessions/${id}/feedback`);
 
     expect(second.status).toBe(200);
     expect(second.body.report_id).toBe(`rpt-${id}`);
   });
 
   it('returns 409 when the session is still active', async () => {
-    const create = await request(app)
+    const create = await agent
       .post('/api/sessions')
       .send({ scenario_id: 'father-daughter-holiday' });
     const id: string = create.body.session_id;
 
-    const res = await request(app).post(`/api/sessions/${id}/feedback`);
+    const res = await agent.post(`/api/sessions/${id}/feedback`);
     expect(res.status).toBe(409);
     expect(res.body).toHaveProperty('error');
   });
 
   it('returns 404 for an unknown session', async () => {
-    const res = await request(app).post('/api/sessions/sess-does-not-exist/feedback');
+    const res = await agent.post('/api/sessions/sess-does-not-exist/feedback');
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty('error');
   });
@@ -99,8 +103,8 @@ describe('POST /api/sessions/:id/feedback', () => {
 describe('GET /api/sessions/:id/feedback', () => {
   it('returns 200 with the cached report after POST', async () => {
     const id = await completedSession();
-    const posted = await request(app).post(`/api/sessions/${id}/feedback`);
-    const got = await request(app).get(`/api/sessions/${id}/feedback`);
+    const posted = await agent.post(`/api/sessions/${id}/feedback`);
+    const got = await agent.get(`/api/sessions/${id}/feedback`);
 
     expect(got.status).toBe(200);
     expect(got.body.report_id).toBe(posted.body.report_id);
@@ -108,14 +112,14 @@ describe('GET /api/sessions/:id/feedback', () => {
 
   it('returns 404 if feedback has not been generated yet', async () => {
     const id = await completedSession();
-    const res = await request(app).get(`/api/sessions/${id}/feedback`);
+    const res = await agent.get(`/api/sessions/${id}/feedback`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/POST/);
   });
 
   it('returns 404 for an unknown session', async () => {
-    const res = await request(app).get('/api/sessions/sess-does-not-exist/feedback');
+    const res = await agent.get('/api/sessions/sess-does-not-exist/feedback');
     expect(res.status).toBe(404);
   });
 });

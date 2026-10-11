@@ -37,12 +37,12 @@ Set your Groq key and preferred model:
 
 ```env
 GROQ_API_KEY=set_your_key_here
-TRAVELER_MODEL=llama-3.3-70b-versatile
+TRAVELER_MODEL=openai/gpt-oss-120b
 ```
 
 The server log will confirm:
 ```
-[traveler] engine: groq (llama-3.3-70b-versatile)
+[traveler] engine: groq:openai/gpt-oss-120b
 ```
 
 Groq's free tier serves Llama-class models via an OpenAI-compatible endpoint — no paid account needed.
@@ -94,6 +94,32 @@ Open **http://localhost:5174**
 
 ---
 
+## Deploying (Fly.io)
+
+The root `Dockerfile` builds one production image: Express serves the built
+client and the API from the same origin, with `shared/contracts` baked in.
+`fly.toml` runs one machine that stops when idle, with data on a 1 GB volume.
+
+```bash
+fly launch --no-deploy --copy-config        # pick a unique app name
+fly volumes create lumi_data --size 1
+fly secrets set SESSION_SECRET=$(openssl rand -hex 32) GROQ_API_KEY=... AUTHORING_TOKEN=...
+fly deploy --build-arg GIT_SHA=$(git rev-parse HEAD)
+```
+
+Try the production image locally:
+
+```bash
+docker build -t lumi --build-arg GIT_SHA=$(git rev-parse HEAD) .
+docker run --rm -p 3000:3000 -e SESSION_SECRET=dev-only -e ALLOW_FIXTURE=1 lumi   # → http://localhost:3000
+```
+
+In production the server refuses to boot without `SESSION_SECRET` or without a
+non-empty model key — it never silently serves canned fixture replies.
+`ALLOW_FIXTURE=1` (above) opts into the fixture for a keyless smoke test.
+
+---
+
 ## Known limitations (hackathon build)
 
 - **Free-tier rate limits.** Live sessions run on Groq's free tier (12k
@@ -130,7 +156,8 @@ Dark and light themes are supported throughout (toggle in the header).
 |---|---|---|
 | `GET` | `/api/scenarios` | List all scenarios |
 | `GET` | `/api/scenarios/:id` | Trainee-safe view (no ground truth) |
-| `POST` | `/api/scenarios` | Create a scenario (validated against the shared contract) |
+| `POST` | `/api/scenarios` | Create a scenario (validated against the shared contract; production requires `Authorization: Bearer $AUTHORING_TOKEN`) |
+| `DELETE` | `/api/scenarios/:id` | Remove a scenario (same token rule) |
 | `POST` | `/api/sessions` | Start a session; traveler speaks first |
 | `POST` | `/api/sessions/:id/turn` | Submit a turn, get traveler reply |
 | `POST` | `/api/sessions/:id/end` | Commit decision, get transcript |
@@ -139,7 +166,13 @@ Dark and light themes are supported throughout (toggle in the header).
 | `GET` | `/api/sessions/:id` | Session view or transcript |
 | `POST` | `/api/sessions/:id/feedback` | Score session → FeedbackReport |
 | `GET` | `/api/sessions/:id/feedback` | Retrieve cached report |
-| `GET` | `/api/traces` | Session lifecycle events |
+| `GET` | `/api/history` | The caller's completed-session reports |
+| `DELETE` | `/api/history` | Clear the caller's reports |
+| `GET` | `/api/traces` | Session lifecycle events (dev only) |
+
+Every visitor gets an anonymous trainee id in a signed, httpOnly cookie (no
+sign-up, no PII). Sessions, reports, and history are scoped to that id — another
+trainee's session answers 404. Clearing cookies starts a fresh history.
 
 ---
 
@@ -151,7 +184,7 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 |---|---|---|
 | `PORT` | `3000` | Server port |
 | `GROQ_API_KEY` | — | **Recommended.** Groq free tier — serves Llama-class models via OpenAI-compatible endpoint. |
-| `TRAVELER_MODEL` | `llama-3.3-70b-versatile` | Pinned role-play model (recorded in traces). |
+| `TRAVELER_MODEL` | `openai/gpt-oss-120b` | Pinned role-play model (recorded in traces). Groq retired `llama-3.3-70b-versatile` for free/dev tiers on 2026-08-16. |
 | `OLLAMA_MODEL` | — | Set to enable local Ollama (e.g. `llama3.3`). |
 | `OLLAMA_BASE_URL` | `http://localhost:11434/v1` | Override for remote Ollama. |
 | `OPENAI_API_KEY` | — | OpenAI (paid). Falls back to `gpt-4o-mini`. |
@@ -161,7 +194,15 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 | `GEMINI_API_KEY` | — | Gemini (free-tier rate limits are tight). |
 | `ALLOWED_ORIGIN` | `*` | CORS origin (set to your frontend URL in prod). |
 | `RATE_LIMIT_MAX` | `20` | Max session creations per IP per minute. |
+| `TURN_RATE_LIMIT_MAX` | `20` | Max trainee turns (model calls) per IP per minute. |
 | `PROBE_TURN_DELAY_MS` | auto | Pacing between turns (ms). Groq free tier tokens/min limited. |
+| `SESSION_SECRET` | dev fallback | Signs the trainee-id cookie. **Required** when `NODE_ENV=production`. |
+| `AUTHORING_TOKEN` | — | Bearer token for scenario POST/DELETE in production (unset = authoring closed). |
+| `TRUST_PROXY` | — | Proxy hops to trust for client IPs (`1` on Fly/Railway). |
+| `DATA_DIR` | `server/data` | Where sessions/reports/traces persist (a volume in production). |
+| `CLIENT_DIST` | `client/dist` | Built client served by Express in production. |
+| `ALLOW_FIXTURE` | — | `1` lets a production server run keyless on canned fixture replies (smoke tests only). |
+| `GIT_SHA` | git HEAD | Prompt version recorded in traces (containers have no `.git`). |
 
 **Traveler model choice precedence:** `GROQ_API_KEY` → `OLLAMA_MODEL` → `OPENAI_API_KEY` → `TRAVELER_API_*` → `GEMINI_API_KEY` → fixture
 

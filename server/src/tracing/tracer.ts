@@ -15,7 +15,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-const TRACE_DIR = '.traces';
+// Under DATA_DIR when set, so traces land on the persistent volume.
+const TRACE_DIR = process.env.DATA_DIR ? path.join(process.env.DATA_DIR, '.traces') : '.traces';
 // Computed per write — a server running past midnight rolls to the new day's file.
 const traceFile = () => path.join(TRACE_DIR, `trace-${new Date().toISOString().slice(0, 10)}.jsonl`);
 
@@ -35,7 +36,9 @@ export interface TraceEntry {
 }
 
 // Prompt version = git commit at process start; placeholder outside a git repo.
+// Containers have no .git — the deploy passes the commit in as GIT_SHA.
 const gitHash: string = (() => {
+  if (process.env.GIT_SHA) return process.env.GIT_SHA.slice(0, 7);
   try {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()

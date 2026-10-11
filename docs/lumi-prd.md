@@ -102,7 +102,9 @@ can't be trusted; they're in the PRD so they get built, not improvised._
    multiply per language.
 3. **Org/instructor dashboards** — how training programs would actually deploy;
    needs the aggregate-anonymous design to be done right (worker-surveillance risk).
-4. **Accounts/auth** — v1 is single local user; accounts only matter once
+4. **Accounts/auth** — the hosted build gives each browser an anonymous trainee
+   id (signed cookie, no PII) so every visitor's sessions and history are
+   private; real accounts (cross-device history) only matter once
    dashboards/multi-user exist.
 5. **LMS integration** — the distribution channel for real adoption; pointless
    until the above exist.

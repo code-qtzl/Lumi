@@ -16,7 +16,8 @@
  * deliberately no public reveal endpoint here.
  */
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+import { timingSafeEqual } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import Ajv2020, { ErrorObject } from 'ajv/dist/2020';
@@ -65,6 +66,22 @@ function toPublicView(s: ScenarioCard): ScenarioPublicView {
   return { ...rest, persona: personaPublic };
 }
 
+// ── Authoring gate ────────────────────────────────────────────────────────────
+
+/**
+ * Authoring changes the scenario pool every trainee plays, so in production it
+ * requires `Authorization: Bearer $AUTHORING_TOKEN` (no token set = closed).
+ * Open in dev, like the other dev endpoints.
+ */
+function requireAuthor(req: Request, res: Response, next: NextFunction) {
+  if (process.env.NODE_ENV !== 'production') return next();
+  const token = process.env.AUTHORING_TOKEN;
+  const given = Buffer.from(req.headers.authorization ?? '');
+  const expected = Buffer.from(`Bearer ${token}`);
+  if (token && given.length === expected.length && timingSafeEqual(given, expected)) return next();
+  return res.status(401).json({ error: 'Authoring requires a valid token.' });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 const router = Router();
@@ -87,7 +104,7 @@ router.get('/:id', (req, res) => {
  * POST /scenarios — validate against the shared contract and add to the
  * registry (immediately playable in sessions).
  */
-router.post('/', (req, res) => {
+router.post('/', requireAuthor, (req, res) => {
   const body = req.body ?? {};
 
   if (!validateCard(body)) {
@@ -115,7 +132,7 @@ router.post('/', (req, res) => {
 });
 
 /** DELETE /scenarios/:id — remove a scenario. */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireAuthor, (req, res) => {
   if (!deleteScenarioCard(req.params.id)) {
     return res.status(404).json({ error: `Scenario '${req.params.id}' not found.` });
   }

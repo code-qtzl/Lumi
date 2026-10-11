@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FeedbackReport } from '../contracts';
 
-const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'reports.json');
+// DATA_DIR points at a persistent volume in production (e.g. /data on Fly).
+const STORE_PATH = path.join(process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'), 'reports.json');
 
 const reports = new Map<string, FeedbackReport>();
 let loaded = false;
@@ -50,11 +51,12 @@ export function listReports(): FeedbackReport[] {
   return Array.from(reports.values());
 }
 
-/** Remove all locally stored feedback reports at the trainee's request. */
-export function clearReports(): void {
+/** Remove the given sessions' feedback reports at the trainee's request. */
+export function deleteReports(sessionIds: string[]): void {
   ensureLoaded();
-  reports.clear();
-  persist();
+  let deleted = false;
+  for (const id of sessionIds) deleted = reports.delete(id) || deleted;
+  if (deleted) persist();
 }
 
 export function __resetForTesting(): void {

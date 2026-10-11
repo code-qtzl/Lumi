@@ -10,7 +10,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SessionState } from './types';
 
-const STORE_PATH = path.join(__dirname, '..', '..', 'data', 'sessions.json');
+// DATA_DIR points at a persistent volume in production (e.g. /data on Fly).
+const STORE_PATH = path.join(process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data'), 'sessions.json');
 
 const sessions = new Map<string, SessionState>();
 let loaded = false;

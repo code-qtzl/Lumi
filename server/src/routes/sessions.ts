@@ -52,8 +52,11 @@ sessionsRouter.post('/', async (req, res) => {
 
   let session;
   try {
-    session = await createSession(card, mode || 'text');
-  } catch {
+    session = await createSession(card, mode || 'text', req.traineeId);
+  } catch (err) {
+    // The only record of WHY (e.g. "HTTP 401 after 4 attempts" = bad key) —
+    // without this a hosted 503 is undiagnosable from the platform logs.
+    console.error(`[sessions] create failed: ${String(err)}`);
     return res.status(503).json({ error: 'Could not start the session — the traveler model is temporarily unavailable. Please try again.' });
   }
   // Hide which scenario was assigned: the id/title alone can reveal the

@@ -50,7 +50,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 function resolveProvider(): { base: string; key: string; model: string; label: string } | null {
   const env = process.env;
   if (env.GROQ_API_KEY) {
-    return { base: 'https://api.groq.com/openai/v1', key: env.GROQ_API_KEY, model: env.TRAVELER_MODEL || 'llama-3.3-70b-versatile', label: 'groq' };
+    return { base: 'https://api.groq.com/openai/v1', key: env.GROQ_API_KEY, model: env.TRAVELER_MODEL || 'openai/gpt-oss-120b', label: 'groq' };
   }
   if (env.OLLAMA_MODEL) {
     return { base: env.OLLAMA_BASE_URL || 'http://localhost:11434/v1', key: 'ollama', model: env.OLLAMA_MODEL, label: 'ollama' };
