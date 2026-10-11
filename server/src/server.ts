@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import app from './app';
 import { listScenarios } from './scenarios/registry';
+import { assertIdentityConfig } from './identity';
+
+assertIdentityConfig();
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 

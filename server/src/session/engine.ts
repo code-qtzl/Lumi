@@ -61,7 +61,12 @@ function appendReplies(turns: Turn[], replies: ReplyTurn[]): Turn[] {
  * Create a new session from a scenario card.
  * Returns the session ID and the traveler's opening turn(s).
  */
-export async function createSession(scenarioCard: ScenarioCard, mode: 'text' | 'voice' = 'text'): Promise<CreateSessionResponse> {
+export async function createSession(
+  scenarioCard: ScenarioCard,
+  mode: 'text' | 'voice' = 'text',
+  // Routes always pass the caller's trainee id; scripts/probes run as 'local'.
+  ownerId = 'local',
+): Promise<CreateSessionResponse> {
   const sessionId = nextSessionId();
   const now = new Date().toISOString();
 
@@ -71,6 +76,7 @@ export async function createSession(scenarioCard: ScenarioCard, mode: 'text' | '
 
   const state: SessionState = {
     session_id: sessionId,
+    owner_id: ownerId,
     scenario_id: scenarioCard.scenario_id,
     scenario_card: scenarioCard,
     status: 'active',

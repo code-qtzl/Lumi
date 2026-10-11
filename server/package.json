@@ -4,6 +4,8 @@
 	"version": "1.0.0",
 	"scripts": {
 		"server": "ts-node src/server.ts",
+		"build": "tsc -p tsconfig.build.json",
+		"start": "node dist/server.js",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"eval": "ts-node src/eval/run.ts",

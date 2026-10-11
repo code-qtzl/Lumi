@@ -17,6 +17,8 @@ export type SessionStatus = 'active' | 'nudged' | 'awaiting_decision' | 'complet
 /** Hidden runtime state — never exposed to the client. */
 export interface SessionState {
   session_id: string;
+  /** Anonymous trainee id (see identity.ts); only the owner can read or play it. */
+  owner_id: string;
   scenario_id: string;
   scenario_card: ScenarioCard;
   status: SessionStatus;

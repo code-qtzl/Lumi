@@ -52,7 +52,7 @@ sessionsRouter.post('/', async (req, res) => {
 
   let session;
   try {
-    session = await createSession(card, mode || 'text');
+    session = await createSession(card, mode || 'text', req.traineeId);
   } catch {
     return res.status(503).json({ error: 'Could not start the session — the traveler model is temporarily unavailable. Please try again.' });
   }
