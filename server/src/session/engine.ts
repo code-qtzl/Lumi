@@ -174,6 +174,8 @@ export async function submitTurn(sessionId: string, text: string): Promise<Submi
     }
     setSession(sessionId, state);
     trace('session.turn_failed', { session_id: sessionId, error: String(err) });
+    // Traces live on disk; stderr is what hosted logs (fly logs) show.
+    console.error(`[session] turn failed for ${sessionId}: ${String(err)}`);
     return { error: 'The traveler did not respond (model temporarily unavailable). Please send your question again.' };
   }
   if (state.status !== 'active' && state.status !== 'nudged') {

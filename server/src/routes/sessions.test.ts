@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import app from '../app';
 import { __resetForTesting as resetSessions } from '../session/store';
+import { getTraveler, setTraveler } from '../traveler';
 
 // One cookie-carrying agent per test = one trainee (identity.ts).
 let agent: ReturnType<typeof request.agent>;
@@ -371,6 +372,27 @@ describe('hidden scenario assignment', () => {
       .send({ scenario_id: 'coached-companion' });
     expect(res.status).toBe(201);
     expect(res.body.scenario_id).toBe('coached-companion');
+  });
+});
+
+// ── Model failures are logged (hosted logs are the only place to see why) ───
+
+describe('model unavailable', () => {
+  it('POST /api/sessions returns 503 and logs the underlying cause', async () => {
+    const original = getTraveler();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    setTraveler({
+      name: 'unauthorized-fake',
+      reply: async () => { throw new Error('Traveler model unavailable: HTTP 401 after 4 attempts'); },
+    });
+    try {
+      const res = await agent.post('/api/sessions').send({});
+      expect(res.status).toBe(503);
+      expect(logged).toHaveBeenCalledWith(expect.stringContaining('HTTP 401 after 4 attempts'));
+    } finally {
+      setTraveler(original);
+      logged.mockRestore();
+    }
   });
 });
 
