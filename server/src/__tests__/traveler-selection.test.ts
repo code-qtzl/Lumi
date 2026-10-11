@@ -1,4 +1,4 @@
-import { getTraveler, setTraveler } from '../traveler';
+import { assertTravelerConfig, getTraveler, setTraveler } from '../traveler';
 
 /**
  * A configured model traveler answers EVERY turn — there is no per-turn
@@ -38,5 +38,51 @@ describe('traveler selection', () => {
 
   it('falls back to the fixture engine only when keyless', () => {
     expect(getTraveler().name).toBe('fixture');
+  });
+});
+
+/**
+ * Production must never silently serve the fixture: a deploy with an empty
+ * GROQ_API_KEY secret once ran canned replies on the live site.
+ */
+describe('assertTravelerConfig (production boot guard)', () => {
+  const KEYS = ['NODE_ENV', 'ALLOW_FIXTURE', 'GROQ_API_KEY', 'OLLAMA_MODEL', 'OPENAI_API_KEY', 'TRAVELER_API_KEY', 'TRAVELER_API_BASE', 'GEMINI_API_KEY'] as const;
+  let saved: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    saved = Object.fromEntries(KEYS.map(k => [k, process.env[k]]));
+    for (const k of KEYS) delete process.env[k];
+    setTraveler(null);
+  });
+
+  afterEach(() => {
+    for (const k of KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+    setTraveler(null);
+  });
+
+  it('refuses to boot in production when the model key is empty', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.GROQ_API_KEY = '';
+    expect(() => assertTravelerConfig()).toThrow(/No traveler model configured/);
+  });
+
+  it('boots in production with a model key', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.GROQ_API_KEY = 'test-key';
+    expect(() => assertTravelerConfig()).not.toThrow();
+  });
+
+  it('allows the fixture in production only with ALLOW_FIXTURE=1', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.ALLOW_FIXTURE = '1';
+    expect(() => assertTravelerConfig()).not.toThrow();
+  });
+
+  it('never blocks keyless dev', () => {
+    process.env.NODE_ENV = 'development';
+    expect(() => assertTravelerConfig()).not.toThrow();
   });
 });

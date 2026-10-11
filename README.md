@@ -111,8 +111,12 @@ Try the production image locally:
 
 ```bash
 docker build -t lumi --build-arg GIT_SHA=$(git rev-parse HEAD) .
-docker run --rm -p 3000:3000 -e SESSION_SECRET=dev-only lumi   # → http://localhost:3000
+docker run --rm -p 3000:3000 -e SESSION_SECRET=dev-only -e ALLOW_FIXTURE=1 lumi   # → http://localhost:3000
 ```
+
+In production the server refuses to boot without `SESSION_SECRET` or without a
+non-empty model key — it never silently serves canned fixture replies.
+`ALLOW_FIXTURE=1` (above) opts into the fixture for a keyless smoke test.
 
 ---
 
@@ -197,6 +201,7 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 | `TRUST_PROXY` | — | Proxy hops to trust for client IPs (`1` on Fly/Railway). |
 | `DATA_DIR` | `server/data` | Where sessions/reports/traces persist (a volume in production). |
 | `CLIENT_DIST` | `client/dist` | Built client served by Express in production. |
+| `ALLOW_FIXTURE` | — | `1` lets a production server run keyless on canned fixture replies (smoke tests only). |
 | `GIT_SHA` | git HEAD | Prompt version recorded in traces (containers have no `.git`). |
 
 **Traveler model choice precedence:** `GROQ_API_KEY` → `OLLAMA_MODEL` → `OPENAI_API_KEY` → `TRAVELER_API_*` → `GEMINI_API_KEY` → fixture

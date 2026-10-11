@@ -62,6 +62,19 @@ export function getTraveler(): TravelerEngine {
   return traveler;
 }
 
+/**
+ * Called at boot. A production deploy with no usable model key would
+ * otherwise serve canned fixture replies as if they were the real traveler —
+ * and score trainees on them. An empty secret (GROQ_API_KEY="") lands here
+ * too. ALLOW_FIXTURE=1 opts in explicitly (e.g. smoke-testing the image).
+ */
+export function assertTravelerConfig(): void {
+  if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_FIXTURE === '1') return;
+  if (getTraveler() === fixtureTraveler) {
+    throw new Error('No traveler model configured in production (is GROQ_API_KEY empty?). Set a model key, or ALLOW_FIXTURE=1 to serve canned replies.');
+  }
+}
+
 /** Test/probe hook: force a specific engine. */
 export function setTraveler(engine: TravelerEngine | null): void {
   traveler = engine;
