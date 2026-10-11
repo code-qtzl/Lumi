@@ -27,7 +27,7 @@ describe('traveler selection', () => {
   it('uses the model engine directly when a key is configured — no mix wrapper', () => {
     process.env.GROQ_API_KEY = 'test-key';
     const engine = getTraveler();
-    expect(engine.name).toBe('groq:llama-3.3-70b-versatile');
+    expect(engine.name).toBe('groq:openai/gpt-oss-120b');
     expect(engine.name).not.toMatch(/^mix-/);
   });
 

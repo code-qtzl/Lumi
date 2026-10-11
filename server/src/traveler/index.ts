@@ -29,7 +29,7 @@ export function getTraveler(): TravelerEngine {
     modelTraveler = createOpenAiCompatTraveler({
       apiBase: 'https://api.groq.com/openai/v1',
       apiKey: GROQ_API_KEY,
-      model: TRAVELER_MODEL || 'llama-3.3-70b-versatile',
+      model: TRAVELER_MODEL || 'openai/gpt-oss-120b',
       label: 'groq',
     });
   } else if (OLLAMA_MODEL) {

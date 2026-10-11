@@ -37,12 +37,12 @@ Set your Groq key and preferred model:
 
 ```env
 GROQ_API_KEY=set_your_key_here
-TRAVELER_MODEL=llama-3.3-70b-versatile
+TRAVELER_MODEL=openai/gpt-oss-120b
 ```
 
 The server log will confirm:
 ```
-[traveler] engine: groq (llama-3.3-70b-versatile)
+[traveler] engine: groq:openai/gpt-oss-120b
 ```
 
 Groq's free tier serves Llama-class models via an OpenAI-compatible endpoint — no paid account needed.
@@ -184,7 +184,7 @@ Copy `server/.env.example` to `server/.env` and fill in what you need.
 |---|---|---|
 | `PORT` | `3000` | Server port |
 | `GROQ_API_KEY` | — | **Recommended.** Groq free tier — serves Llama-class models via OpenAI-compatible endpoint. |
-| `TRAVELER_MODEL` | `llama-3.3-70b-versatile` | Pinned role-play model (recorded in traces). |
+| `TRAVELER_MODEL` | `openai/gpt-oss-120b` | Pinned role-play model (recorded in traces). Groq retired `llama-3.3-70b-versatile` for free/dev tiers on 2026-08-16. |
 | `OLLAMA_MODEL` | — | Set to enable local Ollama (e.g. `llama3.3`). |
 | `OLLAMA_BASE_URL` | `http://localhost:11434/v1` | Override for remote Ollama. |
 | `OPENAI_API_KEY` | — | OpenAI (paid). Falls back to `gpt-4o-mini`. |
